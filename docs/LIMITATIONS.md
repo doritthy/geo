@@ -34,3 +34,41 @@ we simplified, it's documented here rather than silently faked.
 - **Map raster tiling**: GeoTIFFs are re-encoded to a single PNG for the
   2D map (reprojected to WGS84) rather than a full XYZ tile pyramid, so
   very large rasters (>~4000px) will be downsampled for display.
+
+## Backend implementation notes (apps/api)
+
+A few small scope decisions made while implementing the backend, where the
+contract didn't spell out the exact behavior:
+
+- **Well identity across files**: a LAS (`well_log`) or CSV (`well_trajectory`)
+  upload is matched to an existing `wells` row by `(project_id, name)` and
+  merges into it (new logs/trajectory points attach to the same well)
+  rather than always creating a new well. The name comes from the LAS
+  `WELL` header field, or the CSV filename (without extension) when the
+  source has no explicit well name. This lets a LAS file and a trajectory
+  CSV for the same well combine into one `WellDetail`.
+- **CSV trajectory with X/Y/TVD but no MD column**: since `well_trajectory_points.md`
+  is `NOT NULL`, when a CSV supplies X/Y/TVD directly with no MD column
+  (and no `column_mapping` entry for it), MD is approximated as `TVD`
+  (i.e. a vertical-well assumption for that row) rather than rejecting the
+  upload.
+- **Admin project listing**: `GET /api/projects` returns all projects in the
+  admin's organization for an org-`admin` user (not only ones they hold an
+  explicit `project_members` row for), consistent with "admin can do
+  anything in their organization" in `docs/API_CONTRACT.md`'s Roles
+  section. Non-admin users still only see projects they're an explicit
+  member of.
+- **Grid `/sample` internal bookkeeping**: the public `/cells` and
+  `/properties/{name}` binary layouts are exactly as specified in
+  `docs/API_CONTRACT.md` (no extra fields). To support `/sample`'s
+  structured `(i,j,k)` trilinear lookup without changing `schema.sql` or
+  the public binary layout, the backend additionally writes a private,
+  non-API-exposed binary blob per grid (deterministic object-store key
+  derived from the grid id) holding each active cell's natural `(i,j,k)`
+  index in the same order as `cells.bin`. This is purely a server-side
+  implementation detail for `/sample` and isn't part of the contract.
+- **Object store for backend tests**: genuine MinIO server binaries are no
+  longer published for download upstream, so `apps/api/tests` run against a
+  real S3-compatible HTTP server via `moto`'s server mode instead of real
+  MinIO for local/sandboxed test runs (docker-compose is unchanged and
+  still uses real MinIO for actual deployment). See `apps/api/README.md`.

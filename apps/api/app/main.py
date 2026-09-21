@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,7 +9,19 @@ from app.storage import ensure_bucket
 
 settings = get_settings()
 
-app = FastAPI(title="Subsurface 3D Workspace API")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Best-effort: create the bucket if the object store is reachable. This
+    # must never crash app startup (e.g. object store briefly unavailable).
+    try:
+        ensure_bucket()
+    except Exception:
+        pass
+    yield
+
+
+app = FastAPI(title="Subsurface 3D Workspace API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,16 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Cell-Count", "Content-Length"],
 )
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    # Best-effort: create the bucket if the object store is reachable. This
-    # must never crash app startup (e.g. object store briefly unavailable).
-    try:
-        ensure_bucket()
-    except Exception:
-        pass
 
 
 app.include_router(auth.router)
