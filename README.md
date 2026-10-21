@@ -1,3 +1,23 @@
+# Цифровой двойник строительства + Subsurface 3D Workspace
+
+Веб-платформа цифрового двойника строительства: BIM-модели (IFC, RVT через
+Autodesk APS), облака точек (LAS/LAZ/E57), фотограмметрия (OBJ/GLB/3D Tiles)
+и ГИС-слои (GeoJSON/KML/DXF/GeoTIFF) в одной геопривязанной 3D-сцене на
+CesiumJS. Измерения, замечания, документы ПД/РД, версии и сравнение моделей,
+сечения, временная шкала съёмок, интеграция с Autodesk ACC / BIM 360.
+
+**Документация двойника, соответствие ТЗ и ограничения — [`docs/TWIN.md`](docs/TWIN.md).**
+
+Быстрый старт с демо-данными:
+
+```bash
+docker compose up --build
+python apps/api/scripts/make_demo_data.py demo_data   # здание (IFC v1/v2), скан (LAZ), граница участка
+# http://localhost:3000 → регистрация → новый проект (СК EPSG:32642) → «Загрузить»
+```
+
+---
+
 # Subsurface 3D Workspace
 
 A full-stack platform for uploading, visualizing and analyzing 3D geological
@@ -17,9 +37,9 @@ both halves of the app were built against.
 ## Architecture
 
 ```
-apps/web   Next.js 14 (App Router, TypeScript) + Tailwind + react-three-fiber/Three.js + react-leaflet
-apps/api   FastAPI (Python) — auth, projects, file ingestion, geoscience parsers
-infra/db   PostgreSQL + PostGIS schema (infra/db/schema.sql)
+apps/web   Next.js 14 (App Router, TypeScript) + Tailwind + CesiumJS (twin) + react-three-fiber/react-leaflet (geology)
+apps/api   FastAPI (Python) — auth, projects, file ingestion, IFC/point cloud/mesh -> 3D Tiles, geoscience parsers
+infra/db   PostgreSQL + PostGIS schema (infra/db/schema.sql + infra/db/twin.sql)
            MinIO (S3-compatible) object storage for raw uploads + processed binary buffers
 docs/      API_CONTRACT.md (binding API/DB/binary-format spec), LIMITATIONS.md
 ```
