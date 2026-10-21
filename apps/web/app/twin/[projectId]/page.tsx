@@ -18,6 +18,7 @@ import AnnotationsPanel from '@/components/twin/AnnotationsPanel';
 import DocumentsPanel from '@/components/twin/DocumentsPanel';
 import ComparePanel from '@/components/twin/ComparePanel';
 import SettingsPanel from '@/components/twin/SettingsPanel';
+import AutodeskPanel from '@/components/twin/AutodeskPanel';
 import PropertiesPanel from '@/components/twin/PropertiesPanel';
 import UploadDialog from '@/components/twin/UploadDialog';
 import { ClipPanel, MeasurementCard, TimelineBar, ToolPalette } from '@/components/twin/ViewportOverlays';
@@ -34,6 +35,7 @@ const PANELS: { key: SidePanel; title: string; icon: JSX.Element }[] = [
   { key: 'annotations', title: 'Замечания', icon: Icons.annotate },
   { key: 'documents', title: 'Документы ПД/РД', icon: Icons.docs },
   { key: 'compare', title: 'Сравнение версий', icon: Icons.compare },
+  { key: 'autodesk', title: 'Autodesk ACC / BIM 360', icon: Icons.cloud },
   { key: 'settings', title: 'Настройки проекта', icon: Icons.settings },
 ];
 
@@ -203,6 +205,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
               {panel === 'annotations' && <AnnotationsPanel projectId={projectId} onChanged={() => loadAnnotations()} />}
               {panel === 'documents' && <DocumentsPanel projectId={projectId} />}
               {panel === 'compare' && <ComparePanel />}
+              {panel === 'autodesk' && <AutodeskPanel projectId={projectId} onImported={loadAssets} />}
               {panel === 'settings' && <SettingsPanel project={project} onSaved={setProject} />}
             </div>
           </section>

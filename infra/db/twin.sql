@@ -99,3 +99,36 @@ CREATE TABLE IF NOT EXISTS document_links (
   UNIQUE (document_id, asset_id, element_global_id)
 );
 CREATE INDEX IF NOT EXISTS idx_document_links_element ON document_links(asset_id, element_global_id);
+
+-- Autodesk Platform Services (ACC / BIM 360) integration.
+-- 3-legged OAuth tokens per user (encrypted at rest with a key derived from JWT_SECRET).
+CREATE TABLE IF NOT EXISTS autodesk_connections (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- An ACC/BIM 360 item imported into a project; with a webhook it is
+-- re-imported as a new model version whenever a new version is published.
+CREATE TABLE IF NOT EXISTS autodesk_links (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,  -- whose token re-imports use
+  hub_id TEXT,
+  aps_project_id TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  folder_id TEXT,
+  name TEXT NOT NULL,
+  last_version_id TEXT,
+  version_group UUID,                -- scene_assets.version_group the imports land in
+  hook_id TEXT,
+  options JSONB NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | translating | ready | error
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_autodesk_links_item ON autodesk_links(item_id);
+CREATE INDEX IF NOT EXISTS idx_autodesk_links_project ON autodesk_links(project_id);

@@ -1,0 +1,286 @@
+<!doctype html>
+<html class="no-js" lang="en">
+
+    <head>
+        <link rel="preconnect" href="https://fonts.autodesk.com" crossorigin>
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.autodesk.com/ArtifaktElement/WOFF2/Artifakt%20Element%20Book.woff2" crossorigin>
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.autodesk.com/ArtifaktElement/WOFF2/Artifakt%20Element%20Medium.woff2" crossorigin>
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.autodesk.com/ArtifaktElement/WOFF2/Artifakt%20Element%20Bold.woff2" crossorigin>
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.autodesk.com/ArtifaktLegend/WOFF2/Artifakt%20Legend%20Regular.woff2" crossorigin>
+
+        
+
+
+
+
+
+<script>
+    
+    
+        window.is_appstore_beta_user = false;
+    
+</script>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>APIs | Autodesk Platform Services</title>
+
+<meta name="google-site-verification" content="Y6PoLWHJ3oAI36E_y6yxooLZBLw6LKrJWcYNrz4DO54" />
+<!-- Place favicon.ico and apple-touch-icon(s) in the root directory -->
+<link rel="shortcut icon" href="/static/favicon.76a5d68493b3.ico" type="image/x-icon" />
+<link rel="icon" href="/static/favicon.76a5d68493b3.ico" type="image/x-icon" />
+<link href="/static/styles/ionicons.min.20a5c5d5cc8c.css" rel="stylesheet" />
+
+<!-- FUI CSS CDN library -->
+<link rel="stylesheet" href="/static/forgeui/releases/0.5.92/css/index.min.14ef0183fe97.css">
+<!---->
+
+
+    <link href="/static/styles/common.new.min.2cb225f3ea52.css" rel="stylesheet" />
+
+<noscript><link href="icons.fallback.css" rel="stylesheet"></noscript>
+
+    <link rel="stylesheet" href="/static/styles/pygments.91cabb586c0a.css" type="text/css" />
+    <link rel="stylesheet" href="/static/styles/portal_cms.9fea50ded2d0.css" type="text/css" />
+
+
+    <link rel="stylesheet" href="/static/styles/sphinx_design.4a46b181106a.css" type="text/css" />
+    <link rel="stylesheet" href="/static/styles/api_landing_common.7589dae3be05.css" type="text/css" />
+  
+    <link rel="stylesheet" href="/static/styles/api_landing_external.d41d8cd98f00.css" type="text/css" />
+  
+
+
+  <link rel="stylesheet" href="/static/styles/tabs.456c9d49c3b7.css" type="text/css" />
+
+
+
+        
+        
+    </head>
+    <body class="external api-landing expanding-container">
+        
+
+
+<script type="text/javascript">
+  dataLayer = [{
+    'user': 'public',
+    'account_type': '',
+    'apps_owned':  null ,
+    'user_domain': '',
+    'user_id': '',
+    
+  }];
+</script>
+
+
+
+<script>
+  if (!('pendo' in window)) {
+    window.pendo = { _q: [] };
+    for (const func_name of ['initialize', 'identify', 'updateOptions', 'pageLoad', 'track']) {
+      pendo[func_name] = function () {
+        if (func_name === 'initialize') {
+          pendo._q.unshift([func_name, ...arguments])
+        } else {
+          pendo._q.push([func_name, ...arguments])
+        }
+      }
+    }
+  }
+  pendo.initialize({
+    visitor: {
+      id: '',
+      role: 'anonymous',
+    },
+    excludeAllText: true,
+  })
+</script>
+
+
+
+<script async type="text/javascript" src="//tags.tiqcdn.com/utag/autodesk/forge-web/prod/utag.js"></script>
+
+
+
+
+
+
+  <script type="text/javascript" src="https://js-cdn.dynatrace.com/jstag/1672bab6729/ruxitagent_ICA7NVfqrux_10311250313143955.js" data-dtconfig="app=5471696f6637c942|cuc=rieos4aw|cors=1|mel=100000|expw=1|featureHash=ICA7NVfqrux|dpvc=1|lastModification=1746024479489|reportUrl=https://bf74291tsy.bf.dynatrace.com/bf|tp=500,50,0|rdnt=1|uxrgce=1|agentUri=https://js-cdn.dynatrace.com/jstag/1672bab6729/ruxitagent_ICA7NVfqrux_10311250313143955.js" crossorigin="anonymous"></script>
+
+
+
+        
+
+
+
+<header id="app-navbar" class="x-header"></header>
+<style>
+    /* Override styles to create sticky footer using flexbox */
+    .expanding-container {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+    .expanding-container .space-fatFooter {
+        display: none;
+    }
+    .expanding-container .container-content {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 0;
+        flex: 1;
+    }
+    .expanding-container .container-content > .x-banner,
+    .expanding-container .container-content > .x-banner > * {
+        flex: 0;
+        flex-grow: 0;
+    }
+    .expanding-container .container-content > .x-content-container,
+    .expanding-container .container-content > .app-content-form,
+    .expanding-container .container-content > .app-form {
+        flex: 1;
+    }
+    #app-footer {
+        flex-shrink: 0;
+    }
+    .x-cl-white-bright {
+        color: #fff !important;
+    }
+    h1#navbar.xb-title {
+        padding-top: 50px;
+        color: #000000
+    }
+</style>
+
+        
+  <style type="text/css">
+    .page-header.api-detail-header {
+      background: url("/static/images/Banner_ApiDetail_external.bfdc16f4a67c.png") transparent;
+    }
+    @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi){
+      .page-header.api-detail-header {
+        background: url("/static/images/Banner_ApiDetail_external_2x.608c7f414b32.png") transparent;
+      }
+    }
+  </style>
+  <div class="hide" id="interactive">
+    <h4>Request</h4>
+    <section class="request">
+      <dt class="api_url">
+        <tt class="method"></tt><tt class="url"></tt>
+      </dt>
+    </section>
+    <h4 class="response-header">Response</h4>
+    <section class="response"></section>
+</div>
+
+<div class="x-bg-white-1">
+  <div class="container-content cc--dark">
+    <div class="x-content-container clearfix documentation-container">
+
+      <div class="doc_holder clearfix x-cl-dark-1 is-doc-loading">
+        <div id="nav-sidebar">
+          <div class="nav-sidebar-skeleton" aria-hidden="true">
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+            <div class="skeleton-nav-item"></div>
+          </div>
+        </div>
+        <div class="bs-docs-section clearfix" id="waiting_area">
+          <div class="content-container"><div class="doc-skeleton-content"></div></div>
+        </div>
+        <div class="sidemenu">
+          <ul id="first_nav" class="first_level"></ul>
+        </div>
+        <div class="content-container">
+          <div class="breadcrumb-holder" data-spy="affix" data-offset-top="0">
+            <div class="breadcrumb"></div>
+            <div class="doc-version">
+              <div class="btn-group">
+                <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-x-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <span id="cur_ver"></span>
+                  <svg viewBox="0 0 1126 685">
+                    <title>Shape</title>
+                    <desc>Created with Sketch.</desc>
+                    <defs></defs>
+                    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                      <path d="M594.3,672.2 C576.4,688.1 549.6,688.1 531.7,672.2 L505.6,649.1 L23.8,167.2 C12.3,155.7 0.9,144.3 0.9,121.3 C0.9,109.8 12.4,86.9 23.8,75.4 L81.2,18 C104.1,-4.9 150,-4.9 173,18 L563,408 L953,18 C975.9,-4.9 1021.8,-4.9 1044.8,18 L1102.2,75.4 C1113.7,86.9 1125.1,98.3 1125.1,121.3 C1125.1,132.8 1113.6,155.7 1102.2,167.2 L620.4,649 L594.3,672.2 L594.3,672.2 Z" id="Shape" fill="#BBC2C8"></path>
+                    </g>
+                  </svg>
+                </button>
+                <ul class="dropdown-menu"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+        <div class="space-fatFooter">&nbsp;</div>
+        
+
+<footer id="app-footer" class="clearfix"></footer>
+
+
+
+
+
+
+<script type="text/javascript" src="/static/scripts/release/vendor.new.min.51d702bd26f5.js"></script>
+<!-- Navbar Footer React component -->
+<script type="text/javascript" src="/static/adskf.common.entry.69238ad24b43.js"></script>
+<!-- Script Starts -->
+
+
+<!-- ADP Start -->
+<script type="text/javascript" src="https://ase-cdn.autodesk.com/adp/v1.0.5/js/adp-web-analytics-sdk.min.js"></script>
+<!-- ADP End -->
+<script type="text/javascript">
+  var cf_server_url = '/static/';
+  var appNames = []; // TODO: Probably dead code
+</script>
+<script type="text/javascript" src="/params/custom.js"></script>
+
+<script async type="text/javascript" src="/static/scripts/release/app_au.new.min.3440aa5d801f.js"></script>
+
+<!-- Tabs -->
+
+  <script async defer type="text/javascript" src="/static/scripts/custom/tabs.ad0ef62204b6.js"></script>
+
+
+<!-- FUI JS packages. See https://git.autodesk.com/ASRD-CPUX/fui -->
+<script type="text/javascript" src="/static/forgeui/releases/0.5.92/js/vendor.min.d0f47f13f3ea.js"></script>
+<script type="text/javascript">
+  // FUI 0.5.92 widgets.min.js was built against Bootstrap 3, which exposes
+  // plugin defaults at $.fn.popover.Constructor.DEFAULTS. Bootstrap 4
+  // (bundled in vendor.new.min.js) renamed it to Constructor.Default.
+  // Alias the BS3 name so widgets.min.js can configure popover defaults.
+  (function ($) {
+    if (!$ || !$.fn || !$.fn.popover) return;
+    var C = $.fn.popover.Constructor;
+    if (C && !C.DEFAULTS && C.Default) C.DEFAULTS = C.Default;
+  })(window.jQuery);
+</script>
+<script async defer type="text/javascript" src="/static/forgeui/releases/0.5.92/js/widgets.min.cc3addf06b3b.js"></script>
+<!-- END FUI JS packages -->
+
+
+
+<!-- Script Ends -->
+
+
+
+    </body>
+</html>

@@ -71,6 +71,14 @@ def process_twin_file(db: Session, file: FileRecord) -> None:
         elements: list[dict] = []
         fmt = file.source_format
         if file.category == "bim":
+            from app.config import get_settings
+            from app.integrations.aps import TRANSLATE_TO_IFC
+
+            if fmt in TRANSLATE_TO_IFC and get_settings().aps_configured:
+                from app.integrations.autodesk_service import translate_local_file
+
+                raw_path = translate_local_file(raw_path, file.filename, work)
+                fmt = "ifc"
             if fmt != "ifc":
                 raise ValueError(
                     "BIM: поддерживается IFC (2x3/4/4.3). RVT/NWD конвертируются через Autodesk APS "

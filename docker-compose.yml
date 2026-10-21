@@ -13,6 +13,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./infra/db/twin.sql:/docker-entrypoint-initdb.d/02-twin.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U subsurface"]
       interval: 5s
@@ -67,6 +68,13 @@ services:
       S3_SECRET_KEY: subsurface123
       S3_BUCKET: subsurface-data
       CORS_ORIGINS: http://localhost:3000
+      # Autodesk Platform Services (optional): ACC/BIM 360 import, RVT -> IFC
+      APS_CLIENT_ID: ${APS_CLIENT_ID:-}
+      APS_CLIENT_SECRET: ${APS_CLIENT_SECRET:-}
+      APS_CALLBACK_URL: ${APS_CALLBACK_URL:-http://localhost:8000/api/integrations/autodesk/callback}
+      APS_WEBHOOK_URL: ${APS_WEBHOOK_URL:-}
+      APS_WEBHOOK_SECRET: ${APS_WEBHOOK_SECRET:-}
+      PUBLIC_WEB_URL: http://localhost:3000
     ports:
       - "8000:8000"
     volumes:
@@ -80,12 +88,16 @@ services:
       - api
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Optional: Cesium ion token for world terrain (otherwise a flat ground
+      # at the project's site level is used).
+      NEXT_PUBLIC_CESIUM_ION_TOKEN: ${CESIUM_ION_TOKEN:-}
     ports:
       - "3000:3000"
     volumes:
       - ./apps/web:/app
       - /app/node_modules
       - /app/.next
+      - /app/public/cesium
 
 volumes:
   pgdata:

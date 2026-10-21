@@ -18,6 +18,20 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Autodesk Platform Services (optional). Without credentials the
+    # integration endpoints report "not configured" and RVT uploads ask for IFC.
+    APS_CLIENT_ID: str = ""
+    APS_CLIENT_SECRET: str = ""
+    APS_CALLBACK_URL: str = "http://localhost:8000/api/integrations/autodesk/callback"
+    APS_WEBHOOK_URL: str = ""  # public URL of /api/integrations/autodesk/webhook
+    APS_WEBHOOK_SECRET: str = ""  # per-hook token; callbacks verified via x-adsk-signature
+    APS_BASE_URL: str = "https://developer.api.autodesk.com"
+    PUBLIC_WEB_URL: str = "http://localhost:3000"
+
+    @property
+    def aps_configured(self) -> bool:
+        return bool(self.APS_CLIENT_ID and self.APS_CLIENT_SECRET)
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

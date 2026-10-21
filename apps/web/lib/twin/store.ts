@@ -11,7 +11,7 @@ export type ToolMode =
   | 'volume'
   | 'annotate';
 
-export type SidePanel = 'layers' | 'search' | 'annotations' | 'documents' | 'compare' | 'settings';
+export type SidePanel = 'layers' | 'search' | 'annotations' | 'documents' | 'compare' | 'autodesk' | 'settings';
 
 export interface Selection {
   kind: 'element' | 'feature' | 'annotation';

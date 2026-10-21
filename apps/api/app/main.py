@@ -8,6 +8,7 @@ from app.routers import (
     annotations,
     assets,
     auth,
+    autodesk,
     crs,
     documents,
     files,
@@ -58,6 +59,7 @@ app.include_router(assets.router)
 app.include_router(annotations.router)
 app.include_router(documents.router)
 app.include_router(crs.router)
+app.include_router(autodesk.router)
 
 
 @app.get("/health")
