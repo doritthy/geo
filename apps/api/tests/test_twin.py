@@ -285,3 +285,52 @@ def test_project_crs_and_resolve(client):
     assert info["code"] == "EPSG:32642" and info["is_projected"] and "+proj=utm" in info["proj4"]
     presets = client.get("/api/crs/presets", headers=h).json()
     assert any(p["value"] == "EPSG:28413" for p in presets)
+
+
+def _upload_vector(client, headers, project_id, filename, data, options=None):
+    resp = client.post(
+        f"/api/projects/{project_id}/files",
+        data={"category": "map_vector", **({"options": json.dumps(options)} if options else {})},
+        files={"file": (filename, data)},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    record = client.get(f"/api/files/{resp.json()['id']}", headers=headers).json()
+    assert record["status"] == "ready", record.get("error_message")
+    return client.get(f"/api/map-layers/{record['metadata']['map_layer_id']}", headers=headers).json()
+
+
+def test_vector_geojson_kml_dxf(client):
+    h = _headers(client)
+    pid = _project(client, h, crs="EPSG:32642")
+
+    gj = {
+        "type": "FeatureCollection",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::32642"}},
+        "features": [{"type": "Feature", "properties": {"Кадастр": "01-001"},
+                      "geometry": {"type": "Point", "coordinates": [500000, 5650000]}}],
+    }
+    layer = _upload_vector(client, h, pid, "parcels.geojson", json.dumps(gj).encode())
+    lon, lat = layer["geojson"]["features"][0]["geometry"]["coordinates"][:2]
+    assert lon == pytest.approx(69.0, abs=1e-6) and lat == pytest.approx(51.0, abs=0.1)
+    assert layer["geojson"]["features"][0]["properties"]["Кадастр"] == "01-001"
+
+    kml = """<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+      <Placemark><name>Ось дороги</name><LineString><coordinates>71.40,51.10,0 71.45,51.12,0</coordinates></LineString></Placemark>
+    </Document></kml>""".encode()
+    layer = _upload_vector(client, h, pid, "road.kml", kml)
+    assert layer["geojson"]["features"][0]["geometry"]["type"] == "LineString"
+
+    import io
+
+    import ezdxf
+
+    doc = ezdxf.new()
+    doc.modelspace().add_line((500000, 5650000), (500100, 5650050), dxfattribs={"layer": "Сети"})
+    buf = io.StringIO()
+    doc.write(buf)
+    # DXF has no CRS -> project CRS (UTM 42N) is applied
+    layer = _upload_vector(client, h, pid, "networks.dxf", buf.getvalue().encode())
+    feature = layer["geojson"]["features"][0]
+    assert feature["properties"]["Layer"] == "Сети"
+    assert feature["geometry"]["coordinates"][0][0] == pytest.approx(69.0, abs=1e-6)

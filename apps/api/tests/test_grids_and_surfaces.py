@@ -158,7 +158,7 @@ def test_unsupported_format_stored_with_error(client):
         f"/api/projects/{project['id']}/files",
         headers=headers,
         data={"category": "map_vector"},
-        files={"file": ("drawing.dxf", b"dummy dxf content", "application/octet-stream")},
+        files={"file": ("drawing.dwg", b"dummy dwg content", "application/octet-stream")},
     )
     assert resp.status_code == 201
     file_id = resp.json()["id"]
@@ -166,7 +166,7 @@ def test_unsupported_format_stored_with_error(client):
     resp = client.get(f"/api/files/{file_id}", headers=headers)
     body = resp.json()
     assert body["status"] == "error"
-    assert "DXF" in body["error_message"]
+    assert "DWG" in body["error_message"]
 
 
 def test_formations_crud(client):

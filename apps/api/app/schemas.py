@@ -324,6 +324,7 @@ class BimElementSummary(BaseModel):
 
 class BimElementDetail(BimElementSummary):
     properties: dict[str, Any]
+    bbox: dict[str, Any] | None = None
     documents: list["DocumentSummary"] = []
     annotations: list["Annotation"] = []
 

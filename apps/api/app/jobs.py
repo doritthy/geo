@@ -24,6 +24,7 @@ from app.parsers.mesh_parser import parse_mesh
 from app.parsers.shapefile_parser import parse_shapefile
 from app.parsers.surfer_grd_parser import parse_surfer_grd
 from app.parsers.trajectory_csv_parser import parse_csv_trajectory
+from app.parsers.vector_parser import VECTOR_FORMATS, parse_vector
 from app.parsers.xyz_parser import parse_xyz
 from app.storage import get_bytes, upload_bytes
 from app.twin.jobs import TWIN_CATEGORIES, process_twin_file
@@ -34,10 +35,6 @@ _UNSUPPORTED_MESSAGES = {
     "resqml": (
         "RESQML files are accepted and stored but not parsed: RESQML is a full "
         "EPC/XML+HDF5 standard that needs a dedicated SDK to read correctly. "
-        "See docs/LIMITATIONS.md."
-    ),
-    "dxf": (
-        "DXF files are accepted and stored but not rendered in this pass. "
         "See docs/LIMITATIONS.md."
     ),
     "dwg": (
@@ -283,6 +280,30 @@ def _process_shapefile(db: Session, file: FileRecord) -> None:
     file.metadata_ = {**file.metadata_, "map_layer_id": str(layer.id)}
 
 
+def _vector_crs_hint(db: Session, file: FileRecord):
+    options = file.metadata_.get("options") or {}
+    hint = options.get("crs") or file.metadata_.get("crs_epsg")
+    if not hint:
+        from app.models import Project
+
+        project = db.get(Project, file.project_id)
+        hint = project.crs if project is not None else None
+    return hint
+
+
+def _process_vector(db: Session, file: FileRecord) -> None:
+    raw = get_bytes(file.storage_key)
+    parsed = parse_vector(raw, file.filename, file.source_format, _vector_crs_hint(db, file))
+    name = os.path.splitext(file.filename)[0] or "vector layer"
+    layer = MapLayer(
+        project_id=file.project_id, source_file_id=file.id, name=name, layer_kind="vector",
+        crs_epsg=4326, bounds_geojson=parsed.bounds_geojson, geojson=parsed.geojson,
+    )
+    db.add(layer)
+    db.flush()
+    file.metadata_ = {**file.metadata_, "map_layer_id": str(layer.id), "feature_count": len(parsed.geojson["features"])}
+
+
 def _process_mesh(db: Session, file: FileRecord) -> None:
     raw = get_bytes(file.storage_key)
     parsed = parse_mesh(raw, file.source_format)
@@ -331,6 +352,9 @@ def dispatch_parse(file_id: uuid.UUID, db: Session) -> None:
             file.status = "ready"
         elif fmt == "shp":
             _process_shapefile(db, file)
+            file.status = "ready"
+        elif fmt in VECTOR_FORMATS:
+            _process_vector(db, file)
             file.status = "ready"
         elif fmt in ("obj", "ply", "stl"):
             _process_mesh(db, file)

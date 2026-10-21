@@ -9,8 +9,8 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS crs TEXT;
 
 -- One renderable 3D layer, always served as an OGC 3D Tiles tileset.
 --
--- georef.mode = 'crs'    -> tiles are written in ECEF (exact per-vertex transform
---                           from the source CRS); the client applies no transform.
+-- georef.mode = 'absolute' -> tiles are written in ECEF (exact per-vertex transform
+--                             from the source CRS); the client applies no transform.
 -- georef.mode = 'anchor' -> tiles are written in a local east/north/up metric frame;
 --                           the client places it with longitude/latitude/height/
 --                           heading/scale from `georef`.
@@ -43,8 +43,10 @@ CREATE TABLE IF NOT EXISTS bim_elements (
   properties JSONB NOT NULL DEFAULT '{}',
   geometry_hash TEXT,                 -- for version comparison
   properties_hash TEXT,
+  bbox JSONB,                         -- {min:[x,y,z], max:[x,y,z]} in the asset's tile frame
   UNIQUE (asset_id, global_id)
 );
+ALTER TABLE bim_elements ADD COLUMN IF NOT EXISTS bbox JSONB;
 CREATE INDEX IF NOT EXISTS idx_bim_elements_type ON bim_elements(asset_id, ifc_type);
 
 CREATE TABLE IF NOT EXISTS annotations (

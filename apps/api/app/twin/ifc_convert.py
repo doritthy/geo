@@ -319,6 +319,10 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
         e.pieces = [(c, to_tile(pos), idx) for c, pos, idx in e.pieces]
         allp = np.vstack([p[1] for p in e.pieces])
         e.centroid = allp.mean(axis=0)
+        metas[e.index]["bbox"] = {
+            "min": [round(float(v), 3) for v in allp.min(axis=0)],
+            "max": [round(float(v), 3) for v in allp.max(axis=0)],
+        }
 
     if georef["mode"] == "absolute":
         center = np.mean([e.centroid for e in geoms], axis=0)

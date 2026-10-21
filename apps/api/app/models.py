@@ -323,6 +323,7 @@ class BimElement(Base):
     properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     geometry_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     properties_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bbox: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (UniqueConstraint("asset_id", "global_id"),)
 

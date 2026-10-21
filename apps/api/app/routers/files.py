@@ -50,6 +50,7 @@ _EXTENSION_MAP = {
     "json": "geojson",
     "kml": "kml",
     "kmz": "kmz",
+    "gpkg": "gpkg",
 }
 
 # Extensions whose meaning depends on the chosen category.

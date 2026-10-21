@@ -136,6 +136,7 @@ def process_twin_file(db: Session, file: FileRecord) -> None:
                     "properties": e["properties"],
                     "geometry_hash": e["geometry_hash"],
                     "properties_hash": e["properties_hash"],
+                    "bbox": e.get("bbox"),
                 }
                 for e in elements
             ]

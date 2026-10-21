@@ -220,7 +220,7 @@ def get_element(
 
     return BimElementDetail(
         global_id=element.global_id, ifc_type=element.ifc_type, name=element.name, storey=element.storey,
-        properties=element.properties,
+        properties=element.properties, bbox=element.bbox,
         documents=[doc_summary(d) for d in docs],
         annotations=[AnnotationSchema.model_validate(n) for n in notes],
     )
