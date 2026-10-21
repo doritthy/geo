@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import project_owner, project_viewer
+from app.deps import project_editor, project_owner, project_viewer
 from app.models import Project, ProjectMember, User
 from app.schemas import AddMemberRequest
 from app.schemas import Project as ProjectSchema
-from app.schemas import ProjectCreate
+from app.schemas import ProjectCreate, ProjectUpdate
+from app.twin.georef import GeorefError, resolve_crs
 from app.security import get_current_user
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -35,12 +36,39 @@ def create_project(
         name=payload.name,
         description=payload.description,
         default_crs_epsg=payload.default_crs_epsg,
+        crs=_validated_crs(payload.crs),
         created_by=user.id,
     )
     db.add(project)
     db.flush()
     # Creator is automatically the project owner.
     db.add(ProjectMember(project_id=project.id, user_id=user.id, role="owner"))
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def _validated_crs(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        resolve_crs(value)
+    except GeorefError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return value.strip()
+
+
+@router.patch("/{project_id}", response_model=ProjectSchema)
+def update_project(
+    payload: ProjectUpdate, project: Project = Depends(project_editor), db: Session = Depends(get_db)
+) -> Project:
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name"):
+        project.name = data["name"]
+    if "description" in data:
+        project.description = data["description"]
+    if "crs" in data:
+        project.crs = _validated_crs(data["crs"])
     db.commit()
     db.refresh(project)
     return project

@@ -26,6 +26,7 @@ from app.parsers.surfer_grd_parser import parse_surfer_grd
 from app.parsers.trajectory_csv_parser import parse_csv_trajectory
 from app.parsers.xyz_parser import parse_xyz
 from app.storage import get_bytes, upload_bytes
+from app.twin.jobs import TWIN_CATEGORIES, process_twin_file
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +305,10 @@ def dispatch_parse(file_id: uuid.UUID, db: Session) -> None:
 
     try:
         fmt = file.source_format
-        if fmt in _UNSUPPORTED_MESSAGES:
+        if file.category in TWIN_CATEGORIES:
+            process_twin_file(db, file)
+            file.status = "ready"
+        elif fmt in _UNSUPPORTED_MESSAGES:
             file.status = "error"
             file.error_message = _UNSUPPORTED_MESSAGES[fmt]
         elif fmt == "las":

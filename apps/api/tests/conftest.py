@@ -27,6 +27,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_SQL = REPO_ROOT / "infra" / "db" / "schema.sql"
+TWIN_SQL = REPO_ROOT / "infra" / "db" / "twin.sql"
 API_ROOT = Path(__file__).resolve().parents[1]
 
 PG_HOST = os.environ.get("TEST_PG_HOST", "127.0.0.1")
@@ -78,10 +79,11 @@ def _setup_once() -> None:
 
     db_dsn = f"postgresql://{PG_ADMIN_USER}:{PG_ADMIN_PASSWORD}@{PG_HOST}:{PG_PORT}/{_TEST_DB_NAME}"
     try:
-        subprocess.run(
-            ["psql", db_dsn, "-v", "ON_ERROR_STOP=1", "-f", str(SCHEMA_SQL)],
-            check=True, capture_output=True, text=True,
-        )
+        for sql_file in (SCHEMA_SQL, TWIN_SQL):
+            subprocess.run(
+                ["psql", db_dsn, "-v", "ON_ERROR_STOP=1", "-f", str(sql_file)],
+                check=True, capture_output=True, text=True,
+            )
     except Exception as exc:  # noqa: BLE001
         detail = getattr(exc, "stderr", "") or str(exc)
         _state["skip_reason"] = f"Could not apply schema.sql to test DB ({detail})"
@@ -164,6 +166,7 @@ def _clean_tables():
     from app.db import engine
 
     tables = [
+        "document_links", "document_versions", "documents", "annotations", "bim_elements", "scene_assets",
         "formations", "map_layers", "surfaces", "grid_properties", "grids",
         "well_logs", "well_markers", "well_trajectory_points", "wells",
         "files", "project_members", "projects", "users", "organizations",

@@ -13,7 +13,7 @@ from app.models import Project, User
 from app.schemas import FileCategory
 from app.schemas import FileRecord as FileSchema
 from app.security import get_current_user
-from app.storage import presigned_url, upload_bytes
+from app.storage import presigned_url, upload_fileobj
 
 router = APIRouter(tags=["files"])
 
@@ -36,11 +36,37 @@ _EXTENSION_MAP = {
     "epc": "resqml",
     "dxf": "dxf",
     "dwg": "dwg",
+    # construction digital twin
+    "ifc": "ifc",
+    "rvt": "rvt",
+    "nwd": "nwd",
+    "laz": "laz",
+    "e57": "e57",
+    "pts": "pts",
+    "glb": "glb",
+    "gltf": "gltf",
+    "off": "off",
+    "geojson": "geojson",
+    "json": "geojson",
+    "kml": "kml",
+    "kmz": "kmz",
+}
+
+# Extensions whose meaning depends on the chosen category.
+_CATEGORY_FORMAT_OVERRIDES = {
+    ("point_cloud", "las"): "las",
+    ("point_cloud", "txt"): "xyz",
+    ("point_cloud", "csv"): "csv",
+    ("point_cloud", "xyz"): "xyz",
+    ("reality_mesh", "zip"): "zip",
+    ("map_vector", "zip"): "shp",
 }
 
 
-def infer_source_format(filename: str) -> str:
+def infer_source_format(filename: str, category: str | None = None) -> str:
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if category and (category, ext) in _CATEGORY_FORMAT_OVERRIDES:
+        return _CATEGORY_FORMAT_OVERRIDES[(category, ext)]
     return _EXTENSION_MAP.get(ext, ext or "unknown")
 
 
@@ -54,6 +80,7 @@ async def upload_file(
     category: FileCategory = Form(...),
     crs_epsg: int | None = Form(None),
     column_mapping: str | None = Form(None),
+    options: str | None = Form(None),
     file: UploadFile = File(...),
     project: Project = Depends(project_editor),
     db: Session = Depends(get_db),
@@ -65,9 +92,16 @@ async def upload_file(
             mapping = json.loads(column_mapping)
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid column_mapping JSON") from exc
+    twin_options: dict | None = None
+    if options:
+        try:
+            twin_options = json.loads(options)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid options JSON") from exc
+        if not isinstance(twin_options, dict):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="options must be a JSON object")
 
-    raw = await file.read()
-    source_format = infer_source_format(file.filename or "")
+    source_format = infer_source_format(file.filename or "", category)
     file_id = uuid.uuid4()
     storage_key = f"projects/{project.id}/files/{file_id}/raw/{file.filename}"
 
@@ -78,11 +112,12 @@ async def upload_file(
         source_format=source_format,
         category=category,
         storage_key=storage_key,
-        size_bytes=len(raw),
+        size_bytes=_size_of(file),
         status="uploaded",
         metadata_={
             **({"crs_epsg": crs_epsg} if crs_epsg is not None else {}),
             **({"column_mapping": mapping} if mapping is not None else {}),
+            **({"options": twin_options} if twin_options is not None else {}),
         },
         uploaded_by=user.id,
     )
@@ -90,11 +125,24 @@ async def upload_file(
     db.commit()
     db.refresh(record)
 
-    upload_bytes(storage_key, raw)
+    # Stream the (possibly multi-GB) upload from Starlette's spooled temp file
+    # straight to the object store instead of reading it into memory.
+    file.file.seek(0)
+    upload_fileobj(storage_key, file.file)
 
     background_tasks.add_task(_run_parse_job, file_id)
 
     return record
+
+
+def _size_of(file: UploadFile) -> int:
+    if file.size is not None:
+        return int(file.size)
+    pos = file.file.tell()
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(pos)
+    return size
 
 
 def _run_parse_job(file_id: uuid.UUID) -> None:

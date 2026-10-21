@@ -1,8 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
+    Date,
     Double,
     Enum,
     ForeignKey,
@@ -75,6 +76,7 @@ class Project(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     default_crs_epsg: Mapped[int] = mapped_column(Integer, nullable=False, default=4326)
+    crs: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -281,3 +283,121 @@ class Formation(Base):
     color: Mapped[str] = mapped_column(Text, nullable=False, default="#4C9AFF")
     top_surface_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("surfaces.id"), nullable=True)
     base_surface_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("surfaces.id"), nullable=True)
+
+
+# ---------- Construction digital twin (infra/db/twin.sql) ----------
+
+
+class SceneAsset(Base):
+    __tablename__ = "scene_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    source_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    storage_prefix: Mapped[str] = mapped_column(Text, nullable=False)
+    georef: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    stats: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    version_group: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, default=gen_uuid)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    captured_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class BimElement(Base):
+    __tablename__ = "bim_elements"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scene_assets.id", ondelete="CASCADE"), nullable=False
+    )
+    global_id: Mapped[str] = mapped_column(Text, nullable=False)
+    ifc_type: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    storey: Mapped[str | None] = mapped_column(Text, nullable=True)
+    properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    geometry_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    properties_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (UniqueConstraint("asset_id", "global_id"),)
+
+
+class Annotation(Base):
+    __tablename__ = "annotations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scene_assets.id", ondelete="SET NULL"), nullable=True
+    )
+    element_global_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    longitude: Mapped[float] = mapped_column(Double, nullable=False)
+    latitude: Mapped[float] = mapped_column(Double, nullable=False)
+    height: Mapped[float] = mapped_column(Double, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color: Mapped[str] = mapped_column(Text, nullable=False, default="#F5A623")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    doc_type: Mapped[str] = mapped_column(Text, nullable=False, default="other")
+    code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    versions: Mapped[list["DocumentVersion"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan", order_by="DocumentVersion.version"
+    )
+    links: Mapped[list["DocumentLink"]] = relationship(back_populates="document", cascade="all, delete-orphan")
+
+
+class DocumentVersion(Base):
+    __tablename__ = "document_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    storage_key: Mapped[str] = mapped_column(Text, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    document: Mapped["Document"] = relationship(back_populates="versions")
+
+    __table_args__ = (UniqueConstraint("document_id", "version"),)
+
+
+class DocumentLink(Base):
+    __tablename__ = "document_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    asset_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scene_assets.id", ondelete="CASCADE"), nullable=False
+    )
+    element_global_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    document: Mapped["Document"] = relationship(back_populates="links")

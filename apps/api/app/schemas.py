@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -12,7 +12,9 @@ FileStatus = Literal["uploaded", "processing", "ready", "error"]
 WellType = Literal["producer", "injector", "observation", "exploration"]
 MarkerType = Literal["KOP", "RESERVOIR_ENTRY", "LANDING", "TD", "CUSTOM"]
 FileCategory = Literal[
-    "well_log", "well_trajectory", "grid", "surface", "map_raster", "map_vector", "mesh"
+    "well_log", "well_trajectory", "grid", "surface", "map_raster", "map_vector", "mesh",
+    # construction digital twin
+    "bim", "point_cloud", "reality_mesh",
 ]
 
 
@@ -59,6 +61,13 @@ class ProjectCreate(BaseModel):
     name: str
     description: str | None = None
     default_crs_epsg: int = 4326
+    crs: str | None = None
+
+
+class ProjectUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    crs: str | None = None
 
 
 class Project(BaseModel):
@@ -68,6 +77,7 @@ class Project(BaseModel):
     name: str
     description: str | None
     default_crs_epsg: int
+    crs: str | None = None
     created_at: datetime
 
 
@@ -266,3 +276,158 @@ class Formation(BaseModel):
     color: str
     top_surface_id: uuid.UUID | None
     base_surface_id: uuid.UUID | None
+
+
+# ---------- Construction digital twin ----------
+
+AssetKind = Literal["bim", "point_cloud", "mesh"]
+DocType = Literal["pd", "rd", "other"]
+
+
+class SceneAsset(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    source_file_id: uuid.UUID | None
+    name: str
+    kind: AssetKind
+    georef: dict[str, Any]
+    stats: dict[str, Any]
+    version_group: uuid.UUID
+    version: int
+    captured_at: date | None
+    created_at: datetime
+    tileset_url: str
+
+
+class SceneAssetUpdate(BaseModel):
+    name: str | None = None
+    captured_at: date | None = None
+    # Anchor placement (local models) / fine alignment offset for absolute ones.
+    longitude: float | None = None
+    latitude: float | None = None
+    height: float | None = None
+    heading: float | None = None
+    scale: float | None = Field(default=None, gt=0)
+    offset_enu: list[float] | None = Field(default=None, min_length=3, max_length=3)
+
+
+class BimElementSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    global_id: str
+    ifc_type: str
+    name: str | None
+    storey: str | None
+
+
+class BimElementDetail(BimElementSummary):
+    properties: dict[str, Any]
+    documents: list["DocumentSummary"] = []
+    annotations: list["Annotation"] = []
+
+
+class ElementPage(BaseModel):
+    total: int
+    items: list[BimElementSummary]
+
+
+class CompareResult(BaseModel):
+    base_asset_id: uuid.UUID
+    other_asset_id: uuid.UUID
+    counts: dict[str, int]
+    added: list[BimElementSummary]
+    removed: list[BimElementSummary]
+    modified_geometry: list[BimElementSummary]
+    modified_properties: list[BimElementSummary]
+    truncated: bool
+
+
+class AnnotationCreate(BaseModel):
+    longitude: float = Field(ge=-180, le=180)
+    latitude: float = Field(ge=-90, le=90)
+    height: float
+    title: str = Field(min_length=1, max_length=200)
+    body: str | None = None
+    color: str = "#F5A623"
+    asset_id: uuid.UUID | None = None
+    element_global_id: str | None = None
+
+
+class AnnotationUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    body: str | None = None
+    color: str | None = None
+
+
+class Annotation(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    asset_id: uuid.UUID | None
+    element_global_id: str | None
+    longitude: float
+    latitude: float
+    height: float
+    title: str
+    body: str | None
+    color: str
+    created_by: uuid.UUID | None
+    author_name: str | None = None
+    created_at: datetime
+
+
+class DocumentVersion(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    version: int
+    filename: str
+    size_bytes: int
+    comment: str | None
+    uploaded_at: datetime
+
+
+class DocumentLink(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    asset_id: uuid.UUID
+    element_global_id: str | None
+
+
+class DocumentLinkCreate(BaseModel):
+    asset_id: uuid.UUID
+    element_global_id: str | None = None
+
+
+class DocumentSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    doc_type: DocType
+    code: str | None
+    description: str | None
+    created_at: datetime
+    latest_version: DocumentVersion | None = None
+
+
+class DocumentDetail(DocumentSummary):
+    versions: list[DocumentVersion]
+    links: list[DocumentLink]
+
+
+class CrsInfo(BaseModel):
+    input: str
+    name: str
+    code: str | None
+    proj4: str
+    is_projected: bool
+    is_geographic: bool
+    area_of_use: str | None
+
+
+BimElementDetail.model_rebuild()

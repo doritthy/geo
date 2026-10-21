@@ -4,7 +4,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, files, formations, grids, maps, projects, surfaces, wells
+from app.routers import (
+    annotations,
+    assets,
+    auth,
+    crs,
+    documents,
+    files,
+    formations,
+    grids,
+    maps,
+    projects,
+    surfaces,
+    wells,
+)
 from app.storage import ensure_bucket
 
 settings = get_settings()
@@ -21,7 +34,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Subsurface 3D Workspace API", lifespan=lifespan)
+app = FastAPI(title="Construction Digital Twin & Subsurface 3D API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,7 +42,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Cell-Count", "Content-Length"],
+    expose_headers=["X-Cell-Count", "Content-Length", "Content-Disposition"],
 )
 
 
@@ -41,6 +54,10 @@ app.include_router(grids.router)
 app.include_router(surfaces.router)
 app.include_router(maps.router)
 app.include_router(formations.router)
+app.include_router(assets.router)
+app.include_router(annotations.router)
+app.include_router(documents.router)
+app.include_router(crs.router)
 
 
 @app.get("/health")
