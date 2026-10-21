@@ -334,3 +334,37 @@ def test_vector_geojson_kml_dxf(client):
     feature = layer["geojson"]["features"][0]
     assert feature["properties"]["Layer"] == "Сети"
     assert feature["geometry"]["coordinates"][0][0] == pytest.approx(69.0, abs=1e-6)
+
+
+def test_point_cloud_tiles_decode_to_source_location(client):
+    """Regression: a pnts tile's world position = accumulated tile transforms +
+    RTC_CENTER + stored position; it must land on the source coordinates."""
+    import numpy as np
+    from pyproj import Transformer
+
+    h = _headers(client)
+    pid = _project(client, h)
+    asset_id = _upload(client, h, pid, "scan.las", make_las(), "point_cloud")
+    tileset = client.get(f"/api/assets/{asset_id}/tiles/tileset.json", headers=h).json()
+
+    def find(node, offset):
+        if "transform" in node:
+            offset = offset + np.array(node["transform"][12:15])
+        if "content" in node:
+            return node["content"]["uri"], offset
+        for child in node.get("children", []):
+            found = find(child, offset)
+            if found:
+                return found
+        return None
+
+    uri, offset = find(tileset["root"], np.zeros(3))
+    tile = client.get(f"/api/assets/{asset_id}/tiles/{uri}", headers=h).content
+    ft_len, ft_bin_len = struct.unpack("<II", tile[12:20])
+    ft = json.loads(tile[28 : 28 + ft_len])
+    body = tile[28 + ft_len : 28 + ft_len + ft_bin_len]
+    first = np.frombuffer(body, dtype=np.float32, count=3).astype(np.float64)
+    world = offset + np.array(ft["RTC_CENTER"]) + first
+    to_utm = Transformer.from_crs("EPSG:4978", "EPSG:32642", always_xy=True)
+    x, y, _ = to_utm.transform(*world)
+    assert 500000 <= x <= 500100 and 5650000 <= y <= 5650080

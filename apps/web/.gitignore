@@ -5,3 +5,4 @@ out
 .env.local
 npm-debug.log*
 tsconfig.tsbuildinfo
+public/cesium

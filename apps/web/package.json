@@ -1,17 +1,19 @@
 {
-  "name": "subsurface-web",
+  "name": "construction-twin-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node scripts/copy-cesium.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@react-three/drei": "^9.99.7",
     "@react-three/fiber": "^8.15.19",
-    "cesium": "^1.121.0",
+    "cesium": "1.140.0",
     "leaflet": "^1.9.4",
     "next": "14.2.15",
     "proj4": "^2.12.1",
@@ -24,6 +26,7 @@
   "devDependencies": {
     "@types/leaflet": "^1.9.12",
     "@types/node": "^20.12.7",
+    "@types/proj4": "^2.5.5",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.160.0",
@@ -33,5 +36,9 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "@cesium/engine": "24.0.0",
+    "@cesium/widgets": "14.5.0"
   }
 }

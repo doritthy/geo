@@ -23,7 +23,7 @@ import type {
   Formation,
 } from './types';
 
-function baseUrl(): string {
+export function baseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? '';
 }
 
@@ -37,7 +37,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit = {},
   opts: { binary?: boolean; skipAuth?: boolean } = {}
@@ -160,7 +160,7 @@ export const api = {
     return request<Project[]>('/api/projects');
   },
 
-  async createProject(input: { name: string; description?: string; default_crs_epsg?: number }): Promise<Project> {
+  async createProject(input: { name: string; description?: string; default_crs_epsg?: number; crs?: string }): Promise<Project> {
     return request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(input) });
   },
 

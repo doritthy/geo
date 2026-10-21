@@ -14,6 +14,7 @@ export interface Project {
   name: string;
   description: string | null;
   default_crs_epsg: number;
+  crs?: string | null;
   created_at: string;
 }
 
@@ -24,7 +25,10 @@ export type FileCategory =
   | 'surface'
   | 'map_raster'
   | 'map_vector'
-  | 'mesh';
+  | 'mesh'
+  | 'bim'
+  | 'point_cloud'
+  | 'reality_mesh';
 
 export type FileStatus = 'uploaded' | 'processing' | 'ready' | 'error';
 

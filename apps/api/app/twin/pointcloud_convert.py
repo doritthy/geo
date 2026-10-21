@@ -282,7 +282,9 @@ def _write_tiles(work, out_dir, node_counts, src, crs, height_offset, cube, cube
         with open(os.path.join(out_dir, uri), "wb") as fh:
             fh.write(build_pnts(xyz, colors, center))
         spacing = cube / (BASE_GRID * 2**lvl)
-        nodes[key] = TileNode(box=box, geometric_error=spacing * 2.0, content_uri=uri, origin=center)
+        # Positions are stored relative to RTC_CENTER inside the pnts payload, so
+        # the tile itself carries no transform (that would apply the offset twice).
+        nodes[key] = TileNode(box=box, geometric_error=spacing * 2.0, content_uri=uri)
 
     # Link children to parents; a missing ancestor gets an empty placeholder.
     def parent_key(k):
