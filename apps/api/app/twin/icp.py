@@ -95,28 +95,29 @@ def icp_multistart(src: np.ndarray, tgt: np.ndarray, tgt_n: np.ndarray, max_dist
     face when the initial error is comparable to their thickness (a scan sees
     the outer face, nearest-neighbour picks the inner one). Try a grid of
     initial offsets on a subsample, keep the start whose result matches the
-    most points within 3 cm, then refine on all points from there."""
+    most points within 3 cm, then refine on all points from there. Only
+    horizontal starts are searched (see below)."""
     rng = np.random.default_rng(0)
     sub = src[rng.choice(len(src), min(len(src), 20_000), replace=False)]
     tree = cKDTree(tgt)
     steps = np.linspace(-search, search, 5)
-    best: tuple | None = None
+    candidates: list[tuple[float, np.ndarray]] = []
     for dx in steps:
         for dy in steps:
-            for dz in (-search / 2, 0.0, search / 2):
+            # Vertical starts are not searched: heights come from levelling /
+            # benchmarks and are usually right to a few cm, while slab
+            # thickness makes large vertical jumps genuinely ambiguous.
+            for dz in (0.0,):
                 start = np.eye(4)
                 start[:3, 3] = [dx, dy, dz]
-                moved = sub + start[:3, 3]
-                r = icp_4dof(moved, tgt, tgt_n, max_dist=max_dist, iterations=15)
+                r = icp_4dof(sub + start[:3, 3], tgt, tgt_n, max_dist=max_dist, iterations=15)
                 m = r["matrix"] @ start
-                score = _score(sub @ m[:3, :3].T + m[:3, 3], tree)
-                # Ties are common (a z shift by slab thickness matches the slab's
-                # other face equally well): prefer the smallest correction, since
-                # the georeference is assumed to be roughly right.
-                size = float(np.linalg.norm(m[:3, 3]))
-                tie = 0.03 * max(score, best[0]) if best else 0.0
-                if best is None or score > best[0] + tie or (abs(score - best[0]) <= tie and size < best[2]):
-                    best = (score, m, size)
+                candidates.append((_score(sub @ m[:3, :3].T + m[:3, 3], tree), m))
+    # Near-ties are common (a z shift by slab thickness matches the slab's other
+    # face almost as well): among candidates within 1% of the best score take
+    # the smallest correction, since the georeference is assumed roughly right.
+    top = max(c[0] for c in candidates)
+    best = min((c for c in candidates if c[0] >= top * 0.99), key=lambda c: float(np.linalg.norm(c[1][:3, 3])))
     start = best[1]
     r = icp_4dof(src @ start[:3, :3].T + start[:3, 3], tgt, tgt_n, max_dist=max_dist)
     total = r["matrix"] @ start
