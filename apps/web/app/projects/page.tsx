@@ -135,6 +135,7 @@ function ProjectsPageInner() {
           <span className="text-base font-semibold tracking-tight">{tr('Цифровой двойник строительства')}</span>
         </div>
         <div className="flex items-center gap-4 text-sm text-text-secondary">
+          <Link href="/portfolio" className="rounded-md border border-bg-border px-3 py-1.5 hover:text-text-primary">{tr('Портфель')}</Link>
           <LangSwitch />
           {user && <span>{user.full_name ?? user.email}</span>}
           <button onClick={onLogout} className="rounded-md border border-bg-border px-3 py-1.5 hover:text-text-primary">

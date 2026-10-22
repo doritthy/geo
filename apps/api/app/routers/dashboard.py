@@ -12,6 +12,7 @@ from app.db import get_db
 from app.deps import project_viewer
 from app import iot
 from app.models import Analysis, Document, Issue, Project, ScheduleTask, SceneAsset, Sensor, User
+from app.security import get_current_user
 from app.twin.schedule import metrics
 
 router = APIRouter(tags=["dashboard"])
@@ -91,3 +92,51 @@ def dashboard(project: Project = Depends(project_viewer), db: Session = Depends(
         "scans": scans,
         "documents": db.query(func.count(Document.id)).filter(Document.project_id == project.id).scalar(),
     }
+
+
+@router.get("/api/portfolio")
+def portfolio(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict:
+    """Portfolio analytics: the same key figures for every project the user
+    can see, side by side (schedule, issues, quality, sensors, models)."""
+    from app.routers.projects import list_projects
+
+    today = date.today()
+    rows = []
+    for p in list_projects(db, user):
+        tasks = db.query(ScheduleTask).filter(ScheduleTask.project_id == p.id).all()
+        m = metrics(tasks, today) if tasks else None
+        open_q = db.query(Issue).filter(Issue.project_id == p.id, Issue.status != "closed")
+        dev = (
+            db.query(Analysis)
+            .filter(Analysis.project_id == p.id, Analysis.kind == "deviation", Analysis.status == "ready")
+            .order_by(Analysis.created_at.desc()).first()
+        )
+        states: dict[str, int] = {}
+        for sn in db.query(Sensor).filter(Sensor.project_id == p.id).all():
+            st = iot.effective_state(sn)
+            states[st] = states.get(st, 0) + 1
+        last_scan = (
+            db.query(func.max(SceneAsset.captured_at))
+            .filter(SceneAsset.project_id == p.id, SceneAsset.kind != "bim").scalar()
+        )
+        rows.append({
+            "id": str(p.id), "name": p.name,
+            "schedule": None if m is None else {
+                "planned_percent": m.get("planned_percent"), "actual_percent": m.get("actual_percent"), "spi": m.get("spi"),
+                "finish": m.get("finish"), "forecast_finish": m.get("forecast_finish"), "delay_days": m.get("delay_days"),
+                "late_tasks": m.get("late_tasks"), "tasks": m.get("tasks"),
+            },
+            "issues": {
+                "open": open_q.count(),
+                "overdue": open_q.filter(Issue.due_date.isnot(None), Issue.due_date < today).count(),
+            },
+            "quality": None if dev is None else {
+                "within_tolerance": dev.result["histogram"]["within_tolerance"],
+                "tolerance_cm": dev.result["tolerances"][1] * 100,
+                "date": dev.created_at.date().isoformat(),
+            },
+            "sensors": states,
+            "models": db.query(SceneAsset).filter(SceneAsset.project_id == p.id, SceneAsset.kind == "bim").count(),
+            "last_scan": last_scan.isoformat() if last_scan else None,
+        })
+    return {"date": today.isoformat(), "projects": rows}

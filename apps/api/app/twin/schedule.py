@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -202,11 +203,15 @@ def metrics(tasks: list, on: date) -> dict:
     start = min(t.start_date for t in leaves)
     finish = max(t.finish_date for t in leaves)
     spi = ev / pv if pv > 0 else None
+    # Forecast: remaining work at the pace achieved so far, counted from the
+    # status date (unlike duration/SPI this stays valid after the planned
+    # finish, when PV is saturated, and never lands in the past).
     forecast = None
-    if spi and spi > 0 and ev < total_w:
-        forecast = start + timedelta(days=round((finish - start).days / spi))
-    elif ev >= total_w:
+    if ev >= total_w:
         forecast = on
+    elif ev > 0 and on > start:
+        rate = ev / (on - start).days
+        forecast = on + timedelta(days=math.ceil((total_w - ev) / rate))
     return {
         "status_date": on.isoformat(),
         "weight": "cost" if use_cost else "duration",

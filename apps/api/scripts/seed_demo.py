@@ -92,7 +92,34 @@ def main() -> None:
 
     subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "iot_simulator.py"), "--api", args.api,
                     "--project", pid, "--email", args.email, "--password", args.password], check=False)
+    seed_portfolio(c, h, args.data)
     print(f"\nГотово. Вход: {args.email} / {args.password}; проект {pid}")
+
+
+def seed_portfolio(c: httpx.Client, h: dict, data: str) -> None:
+    """Two lighter projects (schedule + issues) so the portfolio view has
+    something to compare: one on track, one behind with overdue issues."""
+    from datetime import date, timedelta
+
+    sys.path.insert(0, os.path.dirname(__file__))
+    from make_demo_data import make_schedule_xml
+
+    for name, storeys, shift_days, issues in (
+        ("ЖК Демо — Корпус Б", 4, 170, [("Отклонение колонны К-4 от вертикали", -5), ("Нет исполнительной схемы 2 эт.", 10)]),
+        ("Мост через р. Есиль", 6, 25, [("Скол защитного слоя пролёта 2", -12), ("Не закрыт акт скрытых работ", -3),
+                                        ("Протечка деформационного шва", 4)]),
+    ):
+        pid = c.post("/api/projects", headers=h, json={"name": name, "crs": "EPSG:32642"}).json()["id"]
+        xml = make_schedule_xml(storeys=storeys).decode()
+        # Shift the plan so projects differ in progress against today.
+        import re
+
+        xml = re.sub(r"(\d{4}-\d{2}-\d{2})T", lambda m: (date.fromisoformat(m.group(1)) + timedelta(days=shift_days)).isoformat() + "T", xml)
+        c.post(f"/api/projects/{pid}/schedule/import", headers=h, files={"file": ("plan.xml", xml.encode())})
+        for title, due in issues:
+            c.post(f"/api/projects/{pid}/issues", headers=h, json={"title": title, "kind": "prescription",
+                                                                   "due_date": str(date.today() + timedelta(days=due))})
+        print(f"portfolio: {name}")
 
 
 if __name__ == "__main__":

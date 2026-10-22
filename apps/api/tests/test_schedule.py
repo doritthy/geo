@@ -110,3 +110,20 @@ def test_dashboard(client):
     d = client.get(f"/api/projects/{pid}/dashboard", headers=h).json()
     assert d["schedule"]["tasks"] == 6
     assert d["issues"]["open"] == 1 and d["issues"]["overdue"] == 1 and d["issues"]["overdue_list"][0]["number"] == 1
+
+
+def test_forecast_after_planned_finish_is_not_in_the_past():
+    from datetime import date
+    from types import SimpleNamespace
+
+    from app.twin.schedule import metrics
+
+    # Planned Jan–Mar, 60 % done, status date in June: PV is saturated.
+    t = SimpleNamespace(is_summary=False, cost=None, start_date=date(2026, 1, 1), finish_date=date(2026, 3, 31), percent_complete=60)
+    on = date(2026, 6, 1)
+    m = metrics([t], on)
+    f = date.fromisoformat(m["forecast_finish"])
+    assert f > on
+    # 60 % in 151 days -> remaining 40 % needs ~101 more days.
+    assert 95 <= (f - on).days <= 105
+    assert m["delay_days"] == (f - date(2026, 3, 31)).days

@@ -70,7 +70,8 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
   фото с EXIF GPS (камера телефона), комментарии и история, экспорт Excel/PDF, email-уведомления.
 - 4D: импорт графика (MS Project XML, Excel, CSV), привязка задач к элементам, план/факт, SPI, прогноз,
   раскраска модели на отчётную дату, факт по данным сканирования.
-- Дашборд проекта (`/twin/{id}/dashboard`): прогресс, SPI, прогноз, качество, предписания.
+- Дашборд проекта (`/twin/{id}/dashboard`): прогресс, SPI, прогноз, качество, предписания, датчики.
+- Портфель (`/portfolio`): сравнение всех проектов пользователя — выполнение, SPI, прогноз, предписания, качество, датчики.
 - Профиль-разрез вдоль линии: линии сечения BIM и точки скана на графике.
 - Синхронизация предписаний с ACC Issues; PWA (установка на телефон, кэш статики).
 - Управление пользователями организации (API).
@@ -132,6 +133,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | POST/GET | `/api/projects/{id}/schedule/import`, `/schedule`, `/schedule/element-status` | 4D-график |
 | POST | `/api/schedule/tasks/{id}/elements`, `/api/projects/{id}/schedule/progress-from-analysis` | Привязка, факт по скану |
 | GET | `/api/projects/{id}/dashboard` | Дашборд |
+| GET | `/api/portfolio` | Сводка по всем доступным проектам |
 | GET/POST | `/api/projects/{id}/sensors`; GET/PATCH/DELETE `/api/sensors/{id}` | Датчики IoT (токен — только редакторам) |
 | GET | `/api/sensors/{id}/readings?hours=&points=`, `/api/projects/{id}/sensor-alerts` | Ряды (усреднение + min/max), события |
 | POST | `/api/iot/ingest` (`X-Sensor-Token`) | Приём показаний от шлюза: `{value, ts}` или `{readings: [...]}` |
