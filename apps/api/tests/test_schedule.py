@@ -98,3 +98,15 @@ def test_bad_files(client):
     assert r.status_code == 400 and "XML" in r.json()["detail"]
     r = client.post(f"/api/projects/{pid}/schedule/import", headers=h, files={"file": ("plan.xml", b"<x/>")})
     assert r.status_code == 400
+
+
+def test_dashboard(client):
+    h = _headers(client)
+    pid = client.post("/api/projects", json={"name": "Dash"}, headers=h).json()["id"]
+    empty = client.get(f"/api/projects/{pid}/dashboard", headers=h).json()
+    assert empty["schedule"] is None and empty["issues"]["total"] == 0 and empty["quality"] is None
+    client.post(f"/api/projects/{pid}/schedule/import", headers=h, files={"file": ("plan.xml", make_schedule_xml(storeys=2))})
+    client.post(f"/api/projects/{pid}/issues", headers=h, json={"title": "A", "due_date": "2020-01-01"})
+    d = client.get(f"/api/projects/{pid}/dashboard", headers=h).json()
+    assert d["schedule"]["tasks"] == 6
+    assert d["issues"]["open"] == 1 and d["issues"]["overdue"] == 1 and d["issues"]["overdue_list"][0]["number"] == 1

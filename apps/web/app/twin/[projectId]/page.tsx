@@ -166,6 +166,9 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
           <button onClick={() => setUploadOpen(true)} className="flex items-center gap-1 rounded-md bg-accent-teal px-2.5 py-1.5 text-xs font-semibold text-bg hover:bg-accent-teal/90">
             {Icons.upload}<span className="hidden sm:inline">Загрузить</span>
           </button>
+          <Link href={`/twin/${projectId}/dashboard`} className="rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary">
+            Дашборд
+          </Link>
           <Link href={`/projects/${projectId}`} className="hidden rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary md:inline">
             Геология
           </Link>

@@ -11,6 +11,7 @@ from app.routers import (
     auth,
     autodesk,
     crs,
+    dashboard,
     documents,
     files,
     formations,
@@ -68,6 +69,7 @@ app.include_router(analyses.router)
 app.include_router(issues.router)
 app.include_router(organization.router)
 app.include_router(schedule.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")

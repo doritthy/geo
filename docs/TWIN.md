@@ -60,6 +60,17 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
   RVT → IFC через Model Derivative, автообновление новой версией по вебхуку.
 - Адаптивный интерфейс для телефона/планшета (браузер).
 
+**Фаза 2 (план-факт)**
+- Карта отклонений скана от BIM (знаковое расстояние до поверхности, диапазоны ±1/±5/±10 см настраиваются),
+  статистика по элементам, раскраска модели по отклонениям, PDF-отчёт.
+- ICP-подгонка скана к модели (4 степени свободы), сброс подгонки.
+- Предписания и замечания: Открыто → В работе → На проверке → Закрыто, исполнитель, срок, приоритет,
+  фото с EXIF GPS (камера телефона), комментарии и история, экспорт Excel/PDF, email-уведомления.
+- 4D: импорт графика (MS Project XML, Excel, CSV), привязка задач к элементам, план/факт, SPI, прогноз,
+  раскраска модели на отчётную дату, факт по данным сканирования.
+- Дашборд проекта (`/twin/{id}/dashboard`): прогресс, SPI, прогноз, качество, предписания.
+- Управление пользователями организации (API).
+
 ## Ограничения и что не сделано
 
 Честно, относительно ТЗ:
@@ -82,9 +93,11 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 - **Фоновые задачи** выполняются в процессе API (BackgroundTasks), без очереди. Для нагрузки — Celery/RQ.
 - **Высоты**: модель геоида не подключена, только ручная поправка `height_offset`.
 - **Растровые подложки** — один PNG без пирамиды тайлов (большие ортофото будут уменьшены).
-- **Мобильное приложение** (push, фотофиксация с GPS) и всё из Фаз 2–3 (наложение план-факт с картой
-  отклонений, 4D-график, предписания, CV/ML, IoT, 1С) — не начато. Ядро для них готово: облака точек и BIM
-  уже в одной системе координат в ECEF, что нужно для карты отклонений.
+- **Нативного мобильного приложения нет**: фотофиксация через браузер телефона (камера, GPS), push — нет.
+- **ACC Issues** (двусторонняя синхронизация предписаний) — нет.
+- **4D-прогноз** — линейная экстраполяция по SPI, это не ML/«AI-ассистент».
+- **ICP** не исправляет вертикальные ошибки больше ~10 см (неоднозначность по толщине плит).
+- **Фаза 3** (CV/ML, IoT, 1С, white-label) — не начата.
 
 ## API (кратко)
 
@@ -99,6 +112,14 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | GET/POST | `/api/projects/{id}/annotations` | Замечания |
 | GET/POST | `/api/projects/{id}/documents`, `/api/documents/{id}/versions`, `/links` | Документы ПД/РД |
 | GET | `/api/crs/resolve`, `/api/crs/presets` | Системы координат |
+| POST | `/api/projects/{id}/analyses/deviation`, `/analyses/alignment` | Карта отклонений, ICP |
+| GET | `/api/analyses/{id}`, `/api/analyses/{id}/report.pdf` | Результат анализа, PDF |
+| GET/POST/PATCH | `/api/projects/{id}/issues`, `/api/issues/{id}` (+ `/comments`, `/attachments`) | Предписания |
+| GET | `/api/projects/{id}/issues/export.xlsx` / `.pdf` | Реестр предписаний |
+| POST/GET | `/api/projects/{id}/schedule/import`, `/schedule`, `/schedule/element-status` | 4D-график |
+| POST | `/api/schedule/tasks/{id}/elements`, `/api/projects/{id}/schedule/progress-from-analysis` | Привязка, факт по скану |
+| GET | `/api/projects/{id}/dashboard` | Дашборд |
+| GET/POST/PATCH | `/api/organization/users` | Пользователи организации (админ) |
 | … | `/api/integrations/autodesk/*`, `/api/projects/{id}/autodesk/imports` | Autodesk ACC |
 
 Полная схема — `/docs` (Swagger) работающего API.
@@ -111,7 +132,8 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | `APS_CLIENT_ID`, `APS_CLIENT_SECRET` | Приложение Autodesk APS |
 | `APS_CALLBACK_URL` | `https://<api>/api/integrations/autodesk/callback` (зарегистрировать в APS) |
 | `APS_WEBHOOK_URL`, `APS_WEBHOOK_SECRET` | Публичный адрес вебхука и секрет подписи |
-| `PUBLIC_WEB_URL` | Куда возвращать пользователя после входа в Autodesk |
+| `PUBLIC_WEB_URL` | Куда возвращать пользователя после входа в Autodesk; ссылки в письмах |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_TLS` | Email-уведомления о предписаниях |
 
 Существующая база (созданная до появления двойника) обновляется вручную:
 `psql "$DATABASE_URL" -f infra/db/twin.sql` (скрипт идемпотентный).

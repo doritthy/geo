@@ -20,18 +20,26 @@
 ```
 apps/api/app/
   twin/            конвертеры → OGC 3D Tiles: ifc_convert.py, pointcloud_convert.py, mesh_convert.py,
-                   tiles.py (writers glb/b3dm/pnts/tileset), georef.py (PROJ, ECEF, якорь), jobs.py
+                   tiles.py (writers glb/b3dm/pnts/tileset), georef.py (PROJ, ECEF, якорь, world matrix), jobs.py;
+                   анализы: tile_reader.py (чтение своих тайлов), deviation.py, icp.py, analysis_jobs.py,
+                   report.py (PDF); schedule.py (импорт графика, SPI)
   integrations/    aps.py (клиент APS), autodesk_service.py (импорт из ACC), secrets.py (шифрование токенов)
   routers/         assets.py (слои, тайлы, элементы, сравнение), annotations.py, documents.py,
-                   crs.py, autodesk.py, + старые геологические роутеры
+                   crs.py, autodesk.py, analyses.py, issues.py, schedule.py, dashboard.py,
+                   organization.py + старые геологические роутеры
+  notify.py        email (SMTP; в тестах notify.outbox)
   parsers/         vector_parser.py (GeoJSON/KML/DXF/GPKG) + геологические парсеры
   jobs.py          диспетчер фоновой обработки загрузок (twin-категории → twin/jobs.py)
-apps/api/scripts/make_demo_data.py   демо: здание IFC v1/v2 (IfcMapConversion, EPSG:32642), скан LAZ, участок
-apps/api/tests/  test_twin.py, test_autodesk.py (мок APS), twin_fixtures.py + старые тесты
+apps/api/scripts/make_demo_data.py   демо: здание IFC v1/v2 (IfcMapConversion, EPSG:32642), скан LAZ (плита 3 с прогибом 4 см),
+                                     участок GeoJSON, график MS Project XML
+apps/api/scripts/seed_demo.py        заливает демо в работающий инстанс через API (вкл. график и анализ)
+apps/api/tests/  test_twin.py, test_autodesk.py (мок APS), test_analyses.py, test_issues.py, test_schedule.py,
+                 twin_fixtures.py + старые тесты
 apps/web/
   app/twin/[projectId]/page.tsx       рабочее место двойника
-  components/twin/                    CesiumViewer.tsx (ядро сцены) + панели (Layers, Search,
-                                      Annotations, Documents, Compare, Autodesk, Settings, Upload, Properties)
+  app/twin/[projectId]/dashboard/     дашборд проекта
+  components/twin/                    CesiumViewer.tsx (ядро сцены) + панели (Layers, Search, Issues, Annotations,
+                                      Documents, Compare, Analysis, Schedule, Autodesk, Settings, Upload, Properties)
   lib/twin/                           api.ts, store.ts (zustand), types.ts, measure.ts, crs.ts (proj4)
 infra/db/schema.sql + infra/db/twin.sql   схема (twin.sql идемпотентный, применяется вторым)
 ```
@@ -47,6 +55,12 @@ infra/db/schema.sql + infra/db/twin.sql   схема (twin.sql идемпоте�
   точность для дорог/сетей.
 - Без токена Cesium ion глобус поднимается до уровня площадки (`CustomHeightmapTerrainProvider`).
 - Версии моделей — `scene_assets.version_group` + `version`; сравнение по GlobalId и хэшам.
+  Связи с элементами (задачи графика) хранятся по `version_group` — переживают новые версии модели.
+- Мировая матрица слоя = `alignment` (ICP) · (anchor | offset_enu) — одинаково на сервере
+  (`georef.asset_world_matrix`) и в клиенте (`modelMatrixFor`). Менять только синхронно.
+- Раскраска элементов из разных режимов (сравнение, отклонения, 4D) идёт через
+  `store.elementColors` → `styleContent` в `CesiumViewer`.
+- Результаты анализов — обычные `scene_assets` с `stats.analysis_id` (по умолчанию скрыты).
 - Cesium зафиксирован: `cesium@1.140.0` + `overrides` для `@cesium/engine@24.0.0`,
   `@cesium/widgets@14.5.0` (иначе несовместимые версии ломают сборку). Ассеты копирует
   `scripts/copy-cesium.js` (postinstall) в `public/cesium` (в .gitignore).
@@ -64,6 +78,9 @@ cd apps/web && npm install && npx tsc --noEmit && npx next build
 # Весь стек
 docker compose up --build        # web :3000, api :8000 (/docs — Swagger)
 docker compose exec api python scripts/make_demo_data.py /app/demo_data
+
+# Демо в работающий инстанс
+python scripts/make_demo_data.py /tmp/demo && python scripts/seed_demo.py --data /tmp/demo
 
 # Валидация тайлов
 npx 3d-tiles-validator@0.6.0 --tilesetFile <dir>/tileset.json
@@ -84,6 +101,10 @@ Python-зависимости — в venv (`pip install -r requirements.txt -r r
 - В песочнице `pkill -f <шаблон>` убивает и собственный shell, если шаблон есть в команде —
   искать PID через `ps`.
 - После правок бэкенда перезапускать uvicorn (или `--reload`), иначе проверяется старый код.
+- IfcOpenShell тесселирует многопоточно — порядок элементов/треугольников между запусками разный;
+  алгоритмы не должны зависеть от порядка (была нестабильность ICP).
+- При добавлении таблиц: дописать в `infra/db/twin.sql` (идемпотентно), в модели, и в список
+  TRUNCATE в `tests/conftest.py`; локальную demo-БД обновить `psql -f infra/db/twin.sql`.
 - Docker Hub в песочнице отдаёт 429 — базовые образы через `mirror.gcr.io/library/...`;
   внутри сборки pip не доверяет CA прокси (только в песочнице, у пользователя всё нормально).
 - Headless Chromium для скриншотов: `/opt/pw-browsers/chromium` с `--headless=new`,
