@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { request, ApiError } from '@/lib/api';
 import { useTwinStore } from '@/lib/twin/store';
 import { Icons, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 interface Profile {
   length: number;
@@ -55,7 +56,7 @@ export default function ProfileChart() {
       body: JSON.stringify({ a: line.a, b: line.b, bim_asset_id: bimId || null, cloud_asset_id: cloudId || null, width: 0.4 }),
     })
       .then(setData)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Не удалось построить разрез'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : tr('Не удалось построить разрез')));
   }, [line, projectId, bimId, cloudId]);
 
   const scale = useMemo(() => {
@@ -78,25 +79,25 @@ export default function ProfileChart() {
   return (
     <div className="absolute bottom-10 left-3 right-3 z-20 rounded-xl border border-bg-border bg-bg-panel/95 p-3 backdrop-blur sm:left-16">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-semibold text-text-primary">Профиль-разрез</span>
+        <span className="font-semibold text-text-primary">{tr('Профиль-разрез')}</span>
         {data && <span className="text-text-muted">длина {data.length.toFixed(1)} м · коридор скана 0,4 м</span>}
         <Select value={bimId} onChange={(e) => setBimId(e.target.value)} className="!w-auto !py-1 text-xs">
-          <option value="">без модели</option>
+          <option value="">{tr('без модели')}</option>
           {models.map((m) => <option key={m.id} value={m.id}>{m.name} · v{m.version}</option>)}
         </Select>
         <Select value={cloudId} onChange={(e) => setCloudId(e.target.value)} className="!w-auto !py-1 text-xs">
-          <option value="">без скана</option>
+          <option value="">{tr('без скана')}</option>
           {clouds.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
         <span className="ml-auto flex items-center gap-3 text-text-secondary">
           <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-4 bg-text-primary" /> BIM</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-accent-teal" /> Скан</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-accent-teal" /> {tr('Скан')}</span>
         </span>
-        <button onClick={() => setLine(null)} className="text-text-secondary hover:text-text-primary" aria-label="Закрыть">{Icons.close}</button>
+        <button onClick={() => setLine(null)} className="text-text-secondary hover:text-text-primary" aria-label={tr('Закрыть')}>{Icons.close}</button>
       </div>
       {error && <div className="text-xs text-red-300">{error}</div>}
       {!data && !error && <div className="h-40 animate-pulse rounded bg-bg-panel2" />}
-      {data && !scale && <div className="py-6 text-center text-xs text-text-muted">Линия не пересекает модель и скан</div>}
+      {data && !scale && <div className="py-6 text-center text-xs text-text-muted">{tr('Линия не пересекает модель и скан')}</div>}
       {data && scale && (
         <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full"
           onMouseMove={(e) => {
@@ -132,7 +133,7 @@ export default function ProfileChart() {
               <text x={Math.min(hover.x + 12, W - 124)} y={PAD.t + 28} fontSize={11} className="fill-text-secondary">H {hover.z.toFixed(2)} м</text>
             </g>
           )}
-          <text x={8} y={PAD.t + 4} fontSize={10} className="fill-text-muted">H, м</text>
+          <text x={8} y={PAD.t + 4} fontSize={10} className="fill-text-muted">{tr('H, м')}</text>
         </svg>
       )}
     </div>

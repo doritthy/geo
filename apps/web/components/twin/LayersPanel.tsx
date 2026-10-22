@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { KIND_LABELS, type AssetKind, type SceneAsset } from '@/lib/twin/types';
 import type { FileRecord, MapLayerSummary } from '@/lib/types';
 import { Button, Empty, ErrorBox, Icons, Input, formatBytes, formatNumber } from './ui';
+import { tr } from '@/lib/i18n';
 
 function PlacementEditor({ asset, onSaved }: { asset: SceneAsset; onSaved: () => void }) {
   const g = asset.georef;
@@ -34,7 +35,7 @@ function PlacementEditor({ asset, onSaved }: { asset: SceneAsset; onSaved: () =>
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Не удалось сохранить');
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось сохранить'));
     } finally {
       setSaving(false);
     }
@@ -46,13 +47,13 @@ function PlacementEditor({ asset, onSaved }: { asset: SceneAsset; onSaved: () =>
         <>
           <p className="text-[11px] text-text-muted">
             Локальная модель — задайте точку привязки (WGS 84), высоту и азимут оси +Y.
-            {g.source === 'unplaced' && ' Модель ещё не размещена.'}
+            {g.source === 'unplaced' && tr(' Модель ещё не размещена.')}
           </p>
           <div className="grid grid-cols-2 gap-2">
-            <Input value={lat} onChange={(ev) => setLat(ev.target.value)} placeholder="Широта" inputMode="decimal" />
-            <Input value={lon} onChange={(ev) => setLon(ev.target.value)} placeholder="Долгота" inputMode="decimal" />
-            <Input value={h} onChange={(ev) => setH(ev.target.value)} placeholder="Высота, м" inputMode="decimal" />
-            <Input value={heading} onChange={(ev) => setHeading(ev.target.value)} placeholder="Азимут, °" inputMode="decimal" />
+            <Input value={lat} onChange={(ev) => setLat(ev.target.value)} placeholder={tr('Широта')} inputMode="decimal" />
+            <Input value={lon} onChange={(ev) => setLon(ev.target.value)} placeholder={tr('Долгота')} inputMode="decimal" />
+            <Input value={h} onChange={(ev) => setH(ev.target.value)} placeholder={tr('Высота, м')} inputMode="decimal" />
+            <Input value={heading} onChange={(ev) => setHeading(ev.target.value)} placeholder={tr('Азимут, °')} inputMode="decimal" />
           </div>
         </>
       ) : (
@@ -69,7 +70,7 @@ function PlacementEditor({ asset, onSaved }: { asset: SceneAsset; onSaved: () =>
       )}
       {error && <ErrorBox>{error}</ErrorBox>}
       <Button variant="primary" onClick={save} disabled={saving}>
-        {saving ? 'Сохранение…' : 'Применить'}
+        {saving ? tr('Сохранение…') : tr('Применить')}
       </Button>
     </div>
   );
@@ -104,7 +105,7 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
       <div className="flex items-center gap-1 px-1.5 py-1">
         <button
           onClick={() => toggleVisible(asset.id)}
-          title={visible ? 'Скрыть' : 'Показать'}
+          title={visible ? tr('Скрыть') : tr('Показать')}
           className="flex h-7 w-7 shrink-0 items-center justify-center text-text-secondary hover:text-text-primary"
         >
           {visible ? Icons.eye : Icons.eyeOff}
@@ -116,13 +117,13 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
             <span>{summary}</span>
             {asset.captured_at && <span>{new Date(asset.captured_at).toLocaleDateString('ru-RU')}</span>}
             {asset.georef.mode === 'anchor' && asset.georef.source === 'unplaced' && (
-              <span className="text-accent-amber">не размещена</span>
+              <span className="text-accent-amber">{tr('не размещена')}</span>
             )}
           </div>
         </button>
         <button
           onClick={() => requestFlyTo({ assetId: asset.id })}
-          title="Показать на сцене"
+          title={tr('Показать на сцене')}
           className="flex h-7 w-7 shrink-0 items-center justify-center text-text-secondary hover:text-accent-teal"
         >
           {Icons.target}
@@ -131,7 +132,7 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
       {open && (
         <div className="space-y-3 border-t border-bg-border px-2.5 py-2.5">
           <label className="flex items-center gap-2 text-xs text-text-secondary">
-            Прозрачность
+            {tr('Прозрачность')}
             <input
               type="range"
               min={0.1}
@@ -144,7 +145,7 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
           </label>
           {asset.kind === 'bim' && asset.stats.ifc_types && (
             <div>
-              <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">Классы IFC</div>
+              <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">{tr('Классы IFC')}</div>
               <div className="max-h-48 space-y-0.5 overflow-y-auto pr-1">
                 {Object.entries(asset.stats.ifc_types).map(([type, count]) => {
                   const on = !(hidden ?? []).includes(type);
@@ -165,8 +166,8 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
             {asset.stats.tile_count ? ` · тайлов: ${asset.stats.tile_count}` : ''}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setPlacing(!placing)}>{placing ? 'Скрыть привязку' : 'Привязка'}</Button>
-            <Button variant="danger" onClick={remove}>Удалить</Button>
+            <Button onClick={() => setPlacing(!placing)}>{placing ? tr('Скрыть привязку') : tr('Привязка')}</Button>
+            <Button variant="danger" onClick={remove}>{tr('Удалить')}</Button>
           </div>
           {placing && <PlacementEditor asset={asset} onSaved={onChanged} />}
         </div>
@@ -196,7 +197,7 @@ export default function LayersPanel({
     <div className="space-y-4">
       {pendingFiles.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">Обработка</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">{tr('Обработка')}</div>
           {pendingFiles.map((f) => (
             <div key={f.id} className="rounded-md border border-bg-border px-2.5 py-2 text-xs">
               <div className="flex justify-between gap-2">
@@ -208,7 +209,7 @@ export default function LayersPanel({
               ) : (
                 <div className="mt-1 flex items-center gap-2 text-accent-amber">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-accent-amber" />
-                  {f.status === 'uploaded' ? 'в очереди' : 'конвертация в 3D Tiles…'}
+                  {f.status === 'uploaded' ? tr('в очереди') : tr('конвертация в 3D Tiles…')}
                 </div>
               )}
             </div>
@@ -218,7 +219,7 @@ export default function LayersPanel({
 
       {assets.length === 0 && mapLayers.length === 0 && pendingFiles.length === 0 && (
         <Empty>
-          Загрузите BIM-модель (IFC), облако точек (LAS/LAZ/E57), фотограмметрию (OBJ/GLB/3D Tiles) или ГИС-слои.
+          {tr('Загрузите BIM-модель (IFC), облако точек (LAS/LAZ/E57), фотограмметрию (OBJ/GLB/3D Tiles) или ГИС-слои.')}
         </Empty>
       )}
 
@@ -231,7 +232,7 @@ export default function LayersPanel({
               <span className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">{KIND_LABELS[kind]}</span>
               {kind === 'point_cloud' && (
                 <label className="flex items-center gap-1 text-[11px] text-text-muted">
-                  точка
+                  {tr('точка')}
                   <input type="range" min={1} max={8} step={1} value={pointSize} onChange={(e) => setPointSize(Number(e.target.value))} />
                 </label>
               )}
@@ -245,7 +246,7 @@ export default function LayersPanel({
 
       {mapLayers.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">ГИС / 2D-слои</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">{tr('ГИС / 2D-слои')}</div>
           {mapLayers.map((l) => {
             const on = mapVisible[l.id] ?? true;
             return (
@@ -256,7 +257,7 @@ export default function LayersPanel({
               >
                 <span className="text-text-secondary">{on ? Icons.eye : Icons.eyeOff}</span>
                 <span className="truncate">{l.name}</span>
-                <span className="ml-auto text-[11px] text-text-muted">{l.layer_kind === 'raster' ? 'растр' : 'вектор'}</span>
+                <span className="ml-auto text-[11px] text-text-muted">{l.layer_kind === 'raster' ? tr('растр') : tr('вектор')}</span>
               </button>
             );
           })}

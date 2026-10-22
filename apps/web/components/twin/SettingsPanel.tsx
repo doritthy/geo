@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api';
 import type { CrsInfo, TwinProject } from '@/lib/twin/types';
 import { Button, ErrorBox, Field, Input, Select } from './ui';
 import MembersSection from './MembersSection';
+import { tr } from '@/lib/i18n';
 
 /** Project settings: name/description and the project CRS (EPSG / СК-42 /
  * custom PROJ string for МСК), used for coordinate readouts and as the
@@ -32,7 +33,7 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
       twinApi
         .resolveCrs(crs.trim())
         .then(setInfo)
-        .catch((err) => setCrsError(err instanceof ApiError ? err.detail : 'СК не распознана'));
+        .catch((err) => setCrsError(err instanceof ApiError ? err.detail : tr('СК не распознана')));
     }, 400);
     return () => clearTimeout(t);
   }, [crs]);
@@ -45,16 +46,16 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
       onSaved(p);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Не удалось сохранить');
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось сохранить'));
     }
   }
 
   return (
     <div className="space-y-3">
-      <Field label="Название проекта">
+      <Field label={tr('Название проекта')}>
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
-      <Field label="Описание">
+      <Field label={tr('Описание')}>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -62,9 +63,9 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
           className="w-full rounded-md border border-bg-border bg-bg-panel2 px-2.5 py-1.5 text-sm outline-none focus:border-accent-teal"
         />
       </Field>
-      <Field label="Система координат проекта" hint="EPSG-код, PROJ-строка (для МСК) или WKT. Используется для отображения координат и по умолчанию при загрузке.">
+      <Field label={tr('Система координат проекта')} hint={tr('EPSG-код, PROJ-строка (для МСК) или WKT. Используется для отображения координат и по умолчанию при загрузке.')}>
         <Select value={presets.some((p) => p.value === crs) ? crs : ''} onChange={(e) => e.target.value && setCrs(e.target.value)}>
-          <option value="">— выбрать из списка —</option>
+          <option value="">{tr('— выбрать из списка —')}</option>
           {presets.map((p) => (
             <option key={p.value} value={p.value}>{p.label} ({p.value})</option>
           ))}
@@ -73,7 +74,7 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
           value={crs}
           onChange={(e) => setCrs(e.target.value)}
           rows={2}
-          placeholder="EPSG:32642 или +proj=tmerc +lat_0=0 +lon_0=71.03 +k=1 +x_0=2300000 +y_0=-5300000 +ellps=krass +towgs84=… +units=m"
+          placeholder={tr('EPSG:32642 или +proj=tmerc +lat_0=0 +lon_0=71.03 +k=1 +x_0=2300000 +y_0=-5300000 +ellps=krass +towgs84=… +units=m')}
           className="mt-2 w-full rounded-md border border-bg-border bg-bg-panel2 px-2.5 py-1.5 font-mono text-xs outline-none focus:border-accent-teal"
         />
       </Field>
@@ -87,8 +88,8 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
       {crsError && <ErrorBox>{crsError}</ErrorBox>}
       {error && <ErrorBox>{error}</ErrorBox>}
       <div className="flex items-center gap-3">
-        <Button variant="primary" onClick={save} disabled={!!crsError}>Сохранить</Button>
-        {saved && <span className="text-xs text-accent-teal">Сохранено</span>}
+        <Button variant="primary" onClick={save} disabled={!!crsError}>{tr('Сохранить')}</Button>
+        {saved && <span className="text-xs text-accent-teal">{tr('Сохранено')}</span>}
       </div>
       <MembersSection projectId={project.id} />
     </div>

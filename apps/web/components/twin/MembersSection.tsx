@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { request, ApiError } from '@/lib/api';
 import { getStoredUser } from '@/lib/auth';
 import { Button, ErrorBox, Input, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 interface OrgUser { id: string; email: string; full_name: string | null; role: string }
 interface Membership { user_id: string; email: string; full_name: string | null; role: string }
 
-const PROJECT_ROLES: Record<string, string> = { owner: 'Владелец', editor: 'Редактор', viewer: 'Просмотр' };
-const ORG_ROLES: Record<string, string> = { admin: 'Администратор', geologist: 'Специалист', viewer: 'Наблюдатель' };
+const PROJECT_ROLES: Record<string, string> = { owner: tr('Владелец'), editor: tr('Редактор'), viewer: tr('Просмотр') };
+const ORG_ROLES: Record<string, string> = { admin: tr('Администратор'), geologist: tr('Специалист'), viewer: tr('Наблюдатель') };
 
 /** Project members and (for org admins) organisation user accounts. */
 export default function MembersSection({ projectId }: { projectId: string }) {
@@ -40,13 +41,13 @@ export default function MembersSection({ projectId }: { projectId: string }) {
       setInfo(ok);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Ошибка');
+      setError(err instanceof ApiError ? err.detail : tr('Ошибка'));
     }
   }
 
   function addMember(e: FormEvent) {
     e.preventDefault();
-    run(() => request(`/api/projects/${projectId}/members`, { method: 'POST', body: JSON.stringify({ email: addEmail, role: addRole }) }), 'Участник добавлен')
+    run(() => request(`/api/projects/${projectId}/members`, { method: 'POST', body: JSON.stringify({ email: addEmail, role: addRole }) }), tr('Участник добавлен'))
       .then(() => setAddEmail(''));
   }
 
@@ -61,18 +62,18 @@ export default function MembersSection({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4 border-t border-bg-border pt-4">
       <div>
-        <div className="mb-2 text-sm font-semibold">Участники проекта</div>
+        <div className="mb-2 text-sm font-semibold">{tr('Участники проекта')}</div>
         <div className="space-y-1">
           {members.map((m) => (
             <div key={m.user_id} className="flex items-center gap-2 text-xs">
               <span className="min-w-0 flex-1 truncate">{m.full_name || m.email}</span>
               <Select value={m.role} className="w-32"
-                onChange={(e) => run(() => request(`/api/projects/${projectId}/members`, { method: 'POST', body: JSON.stringify({ email: m.email, role: e.target.value }) }), 'Роль изменена')}>
+                onChange={(e) => run(() => request(`/api/projects/${projectId}/members`, { method: 'POST', body: JSON.stringify({ email: m.email, role: e.target.value }) }), tr('Роль изменена'))}>
                 {Object.entries(PROJECT_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </Select>
               {m.user_id !== me?.id && (
-                <button className="text-text-muted hover:text-red-300" title="Убрать из проекта"
-                  onClick={() => run(() => request(`/api/projects/${projectId}/members/${m.user_id}`, { method: 'DELETE' }), 'Участник удалён')}>
+                <button className="text-text-muted hover:text-red-300" title={tr('Убрать из проекта')}
+                  onClick={() => run(() => request(`/api/projects/${projectId}/members/${m.user_id}`, { method: 'DELETE' }), tr('Участник удалён'))}>
                   ✕
                 </button>
               )}
@@ -82,22 +83,22 @@ export default function MembersSection({ projectId }: { projectId: string }) {
         <form onSubmit={addMember} className="mt-2 flex gap-2">
           {isAdmin && notMembers.length ? (
             <Select value={addEmail} onChange={(e) => setAddEmail(e.target.value)} required>
-              <option value="">Пользователь…</option>
+              <option value="">{tr('Пользователь…')}</option>
               {notMembers.map((u) => <option key={u.id} value={u.email}>{u.full_name || u.email}</option>)}
             </Select>
           ) : (
-            <Input value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="email коллеги" type="email" required />
+            <Input value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder={tr('email коллеги')} type="email" required />
           )}
           <Select value={addRole} onChange={(e) => setAddRole(e.target.value)} className="w-32">
             {Object.entries(PROJECT_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
-          <Button type="submit">Добавить</Button>
+          <Button type="submit">{tr('Добавить')}</Button>
         </form>
       </div>
 
       {isAdmin && (
         <div>
-          <div className="mb-2 text-sm font-semibold">Пользователи организации</div>
+          <div className="mb-2 text-sm font-semibold">{tr('Пользователи организации')}</div>
           <div className="mb-2 space-y-0.5 text-xs text-text-secondary">
             {users.map((u) => (
               <div key={u.id} className="flex justify-between gap-2">
@@ -108,14 +109,14 @@ export default function MembersSection({ projectId }: { projectId: string }) {
           </div>
           <form onSubmit={createUser} className="space-y-2 rounded-md bg-bg-panel2/50 p-2">
             <div className="grid grid-cols-2 gap-2">
-              <Input value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} placeholder="ФИО" />
+              <Input value={nu.full_name} onChange={(e) => setNu({ ...nu, full_name: e.target.value })} placeholder={tr('ФИО')} />
               <Input value={nu.email} onChange={(e) => setNu({ ...nu, email: e.target.value })} placeholder="email" type="email" required />
-              <Input value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} placeholder="пароль (от 8 символов)" minLength={8} required />
+              <Input value={nu.password} onChange={(e) => setNu({ ...nu, password: e.target.value })} placeholder={tr('пароль (от 8 символов)')} minLength={8} required />
               <Select value={nu.role} onChange={(e) => setNu({ ...nu, role: e.target.value })}>
                 {Object.entries(ORG_ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </Select>
             </div>
-            <Button type="submit" variant="primary">Создать пользователя</Button>
+            <Button type="submit" variant="primary">{tr('Создать пользователя')}</Button>
           </form>
         </div>
       )}

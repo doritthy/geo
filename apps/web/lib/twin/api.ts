@@ -26,6 +26,7 @@ import type {
   TwinUploadCategory,
   TwinUploadOptions,
 } from './types';
+import { tr } from '@/lib/i18n';
 
 function qs(params: Record<string, string | number | undefined | null>): string {
   const sp = new URLSearchParams();
@@ -64,11 +65,11 @@ function xhrUpload<T>(path: string, form: FormData, onProgress?: (fraction: numb
       else {
         const detail = body && typeof (body as { detail?: unknown }).detail === 'string'
           ? (body as { detail: string }).detail
-          : xhr.statusText || 'Ошибка загрузки';
+          : xhr.statusText || tr('Ошибка загрузки');
         reject(new ApiError(xhr.status, detail));
       }
     };
-    xhr.onerror = () => reject(new ApiError(0, 'Сеть недоступна'));
+    xhr.onerror = () => reject(new ApiError(0, tr('Сеть недоступна')));
     xhr.send(form);
   });
 }
@@ -110,7 +111,7 @@ export const twinApi = {
   deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
   async downloadDocumentVersion(versionId: string, filename: string) {
     const res = await fetch(absoluteUrl(`/api/document-versions/${versionId}/download`), { headers: authHeaders() });
-    if (!res.ok) throw new ApiError(res.status, 'Не удалось скачать файл');
+    if (!res.ok) throw new ApiError(res.status, tr('Не удалось скачать файл'));
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -140,7 +141,7 @@ export const twinApi = {
   getMapLayer: (id: string) => request<MapLayerDetail>(`/api/map-layers/${id}`),
   async mapLayerImage(id: string): Promise<string> {
     const res = await fetch(absoluteUrl(`/api/map-layers/${id}/image`), { headers: authHeaders() });
-    if (!res.ok) throw new ApiError(res.status, 'Растр недоступен');
+    if (!res.ok) throw new ApiError(res.status, tr('Растр недоступен'));
     return URL.createObjectURL(await res.blob());
   },
 
@@ -153,11 +154,11 @@ export const twinApi = {
   deleteAnalysis: (id: string) => request<void>(`/api/analyses/${id}`, { method: 'DELETE' }),
   async downloadReport(id: string) {
     const res = await fetch(absoluteUrl(`/api/analyses/${id}/report.pdf`), { headers: authHeaders() });
-    if (!res.ok) throw new ApiError(res.status, 'Не удалось сформировать отчёт');
+    if (!res.ok) throw new ApiError(res.status, tr('Не удалось сформировать отчёт'));
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Отчёт_отклонения.pdf';
+    a.download = tr('Отчёт_отклонения.pdf');
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
@@ -180,12 +181,12 @@ export const twinApi = {
   deleteIssue: (id: string) => request<void>(`/api/issues/${id}`, { method: 'DELETE' }),
   async attachmentUrl(id: string): Promise<string> {
     const res = await fetch(absoluteUrl(`/api/issue-attachments/${id}`), { headers: authHeaders() });
-    if (!res.ok) throw new ApiError(res.status, 'Файл недоступен');
+    if (!res.ok) throw new ApiError(res.status, tr('Файл недоступен'));
     return URL.createObjectURL(await res.blob());
   },
   async downloadIssues(projectId: string, format: 'xlsx' | 'pdf', p: Record<string, string | undefined>) {
     const res = await fetch(absoluteUrl(`/api/projects/${projectId}/issues/export.${format}${qs(p)}`), { headers: authHeaders() });
-    if (!res.ok) throw new ApiError(res.status, 'Экспорт не удался');
+    if (!res.ok) throw new ApiError(res.status, tr('Экспорт не удался'));
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
     a.href = url;

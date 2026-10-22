@@ -5,6 +5,7 @@ import { useTwinStore } from '@/lib/twin/store';
 import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { Button, Empty, ErrorBox, Field, Icons, Input } from './ui';
+import { tr } from '@/lib/i18n';
 
 const COLORS = ['#F5A623', '#EF4444', '#22C55E', '#3B82F6', '#A78BFA'];
 
@@ -44,14 +45,14 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
       bumpData();
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Не удалось сохранить замечание');
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось сохранить замечание'));
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm('Удалить замечание?')) return;
+    if (!confirm(tr('Удалить замечание?'))) return;
     await twinApi.deleteAnnotation(id);
     bumpData();
     onChanged();
@@ -65,10 +66,10 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
             Новая метка · H {pending.height.toFixed(2)} м
             {pending.globalId && <span className="block text-accent-teal">Привязка к элементу {pending.globalId}</span>}
           </div>
-          <Field label="Заголовок">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="Например: трещина в плите" />
+          <Field label={tr('Заголовок')}>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder={tr('Например: трещина в плите')} />
           </Field>
-          <Field label="Комментарий">
+          <Field label={tr('Комментарий')}>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -89,17 +90,17 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
           </div>
           {error && <ErrorBox>{error}</ErrorBox>}
           <div className="flex gap-2">
-            <Button variant="primary" onClick={save} disabled={saving || !title.trim()}>Сохранить</Button>
-            <Button onClick={() => setPending(null)}>Отмена</Button>
+            <Button variant="primary" onClick={save} disabled={saving || !title.trim()}>{tr('Сохранить')}</Button>
+            <Button onClick={() => setPending(null)}>{tr('Отмена')}</Button>
           </div>
         </div>
       ) : (
         <Button variant={tool === 'annotate' ? 'primary' : 'secondary'} onClick={() => setTool(tool === 'annotate' ? 'select' : 'annotate')}>
-          {tool === 'annotate' ? 'Кликните по модели…' : '+ Добавить метку на модели'}
+          {tool === 'annotate' ? tr('Кликните по модели…') : tr('+ Добавить метку на модели')}
         </Button>
       )}
 
-      {annotations.length === 0 && !pending && <Empty>Замечаний пока нет.</Empty>}
+      {annotations.length === 0 && !pending && <Empty>{tr('Замечаний пока нет.')}</Empty>}
       <div className="space-y-1">
         {annotations.map((a) => (
           <div key={a.id} className="group flex items-start gap-2 rounded-md border border-bg-border px-2.5 py-2">
@@ -114,10 +115,10 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
               <div className="truncate text-sm">{a.title}</div>
               <div className="text-[11px] text-text-muted">
                 {a.author_name ?? '—'} · {new Date(a.created_at).toLocaleDateString('ru-RU')}
-                {a.element_global_id && ' · элемент'}
+                {a.element_global_id && tr(' · элемент')}
               </div>
             </button>
-            <button onClick={() => remove(a.id)} className="text-text-muted opacity-0 hover:text-red-300 group-hover:opacity-100" title="Удалить">
+            <button onClick={() => remove(a.id)} className="text-text-muted opacity-0 hover:text-red-300 group-hover:opacity-100" title={tr('Удалить')}>
               {Icons.trash}
             </button>
           </div>

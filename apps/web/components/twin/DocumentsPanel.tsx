@@ -6,6 +6,7 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { DOC_TYPE_LABELS, type DocType, type DocumentDetail, type DocumentSummary } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Icons, Input, Select, formatBytes } from './ui';
+import { tr } from '@/lib/i18n';
 
 function NewDocumentForm({ projectId, onDone }: { projectId: string; onDone: () => void }) {
   const selection = useTwinStore((s) => s.selection);
@@ -38,7 +39,7 @@ function NewDocumentForm({ projectId, onDone }: { projectId: string; onDone: () 
       bumpData();
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Не удалось загрузить документ');
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось загрузить документ'));
     } finally {
       setSaving(false);
     }
@@ -46,22 +47,22 @@ function NewDocumentForm({ projectId, onDone }: { projectId: string; onDone: () 
 
   return (
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-bg-border bg-bg-panel2/60 p-3">
-      <Field label="Файл">
+      <Field label={tr('Файл')}>
         <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-xs text-text-secondary" required />
       </Field>
-      <Field label="Наименование">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={file?.name ?? 'Раздел КЖ, лист 3'} />
+      <Field label={tr('Наименование')}>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={file?.name ?? tr('Раздел КЖ, лист 3')} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Тип">
+        <Field label={tr('Тип')}>
           <Select value={docType} onChange={(e) => setDocType(e.target.value as DocType)}>
-            <option value="pd">ПД — проектная</option>
-            <option value="rd">РД — рабочая</option>
-            <option value="other">Прочее</option>
+            <option value="pd">{tr('ПД — проектная')}</option>
+            <option value="rd">{tr('РД — рабочая')}</option>
+            <option value="other">{tr('Прочее')}</option>
           </Select>
         </Field>
-        <Field label="Шифр / марка">
-          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="КЖ-01" />
+        <Field label={tr('Шифр / марка')}>
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={tr('КЖ-01')} />
         </Field>
       </div>
       {element && (
@@ -72,8 +73,8 @@ function NewDocumentForm({ projectId, onDone }: { projectId: string; onDone: () 
       )}
       {error && <ErrorBox>{error}</ErrorBox>}
       <div className="flex gap-2">
-        <Button variant="primary" type="submit" disabled={saving || !file}>{saving ? 'Загрузка…' : 'Загрузить'}</Button>
-        <Button type="button" onClick={onDone}>Отмена</Button>
+        <Button variant="primary" type="submit" disabled={saving || !file}>{saving ? tr('Загрузка…') : tr('Загрузить')}</Button>
+        <Button type="button" onClick={onDone}>{tr('Отмена')}</Button>
       </div>
     </form>
   );
@@ -91,7 +92,7 @@ function DocumentCard({ summary, onChanged }: { summary: DocumentSummary; onChan
   }, [open, summary.id]);
 
   async function addVersion(file: File) {
-    const comment = prompt('Комментарий к новой версии (необязательно)') ?? '';
+    const comment = prompt(tr('Комментарий к новой версии (необязательно)')) ?? '';
     const form = new FormData();
     form.append('file', file);
     if (comment) form.append('comment', comment);
@@ -128,7 +129,7 @@ function DocumentCard({ summary, onChanged }: { summary: DocumentSummary; onChan
         </div>
         <div className="mt-0.5 text-[11px] text-text-muted">
           {summary.code && `${summary.code} · `}
-          {latest ? `версия ${latest.version} · ${formatBytes(latest.size_bytes)}` : 'без файла'}
+          {latest ? `версия ${latest.version} · ${formatBytes(latest.size_bytes)}` : tr('без файла')}
         </div>
       </button>
       {open && (
@@ -143,23 +144,23 @@ function DocumentCard({ summary, onChanged }: { summary: DocumentSummary; onChan
                   {v.filename}
                   {v.comment && <span className="text-text-muted"> — {v.comment}</span>}
                 </span>
-                <button className="text-text-secondary hover:text-accent-teal" title="Скачать" onClick={() => twinApi.downloadDocumentVersion(v.id, v.filename)}>
+                <button className="text-text-secondary hover:text-accent-teal" title={tr('Скачать')} onClick={() => twinApi.downloadDocumentVersion(v.id, v.filename)}>
                   {Icons.download}
                 </button>
               </div>
             ))}
           {detail && (
             <div className="text-[11px] text-text-muted">
-              Привязки: {detail.links.length === 0 ? 'нет' : detail.links.map((l) => l.element_global_id ?? 'вся модель').join(', ')}
+              Привязки: {detail.links.length === 0 ? tr('нет') : detail.links.map((l) => l.element_global_id ?? tr('вся модель')).join(', ')}
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             <label className="cursor-pointer rounded-md border border-bg-border px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary">
-              {busy ? 'Загрузка…' : 'Новая версия'}
+              {busy ? tr('Загрузка…') : tr('Новая версия')}
               <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && addVersion(e.target.files[0])} />
             </label>
-            {selection?.kind === 'element' && <Button onClick={linkSelected}>Привязать к элементу</Button>}
-            <Button variant="danger" onClick={remove}>Удалить</Button>
+            {selection?.kind === 'element' && <Button onClick={linkSelected}>{tr('Привязать к элементу')}</Button>}
+            <Button variant="danger" onClick={remove}>{tr('Удалить')}</Button>
           </div>
         </div>
       )}
@@ -190,24 +191,24 @@ export default function DocumentsPanel({ projectId }: { projectId: string }) {
       {adding ? (
         <NewDocumentForm projectId={projectId} onDone={() => { setAdding(false); load(); }} />
       ) : (
-        <Button variant="primary" onClick={() => setAdding(true)}>+ Загрузить документ</Button>
+        <Button variant="primary" onClick={() => setAdding(true)}>{tr('+ Загрузить документ')}</Button>
       )}
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по названию, шифру, файлу…" />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Поиск по названию, шифру, файлу…')} />
       <div className="flex gap-2">
         <Select value={docType} onChange={(e) => setDocType(e.target.value as DocType | '')}>
-          <option value="">Все типы</option>
-          <option value="pd">ПД</option>
-          <option value="rd">РД</option>
-          <option value="other">Прочее</option>
+          <option value="">{tr('Все типы')}</option>
+          <option value="pd">{tr('ПД')}</option>
+          <option value="rd">{tr('РД')}</option>
+          <option value="other">{tr('Прочее')}</option>
         </Select>
       </div>
       {selection?.kind === 'element' && (
         <label className="flex items-center gap-2 text-xs text-text-secondary">
           <input type="checkbox" checked={onlySelected} onChange={(e) => setOnlySelected(e.target.checked)} />
-          Только для выбранного элемента
+          {tr('Только для выбранного элемента')}
         </label>
       )}
-      {docs.length === 0 ? <Empty>Документов не найдено.</Empty> : docs.map((d) => <DocumentCard key={d.id} summary={d} onChanged={load} />)}
+      {docs.length === 0 ? <Empty>{tr('Документов не найдено.')}</Empty> : docs.map((d) => <DocumentCard key={d.id} summary={d} onChanged={load} />)}
     </div>
   );
 }

@@ -68,6 +68,7 @@ import {
   volumeAgainstBase,
   volumeSampleGrid,
 } from '@/lib/twin/measure';
+import { tr } from '@/lib/i18n';
 
 // Workers/assets are copied to public/cesium by scripts/copy-cesium.js.
 // Cesium resolves the base URL lazily, so setting it before the Viewer is
@@ -738,10 +739,10 @@ export default function CesiumViewer({
         set({
           tool: currentTool,
           lines: [
-            { label: 'Длина (3D)', value: fmtLength(r.length3d) },
-            { label: 'Горизонтальное проложение', value: fmtLength(r.horizontal) },
-            { label: 'Перепад высот', value: fmtLength(r.dh) },
-            { label: 'Точек', value: String(pts.length) },
+            { label: tr('Длина (3D)'), value: fmtLength(r.length3d) },
+            { label: tr('Горизонтальное проложение'), value: fmtLength(r.horizontal) },
+            { label: tr('Перепад высот'), value: fmtLength(r.dh) },
+            { label: tr('Точек'), value: String(pts.length) },
           ],
         });
         if (final) label(pts[pts.length - 1], fmtLength(r.length3d));
@@ -750,9 +751,9 @@ export default function CesiumViewer({
         set({
           tool: currentTool,
           lines: [
-            { label: 'Площадь (в плане)', value: fmtArea(r.horizontal) },
-            { label: 'Площадь поверхности', value: fmtArea(r.surface) },
-            { label: 'Периметр', value: fmtLength(r.perimeter) },
+            { label: tr('Площадь (в плане)'), value: fmtArea(r.horizontal) },
+            { label: tr('Площадь поверхности'), value: fmtArea(r.surface) },
+            { label: tr('Периметр'), value: fmtLength(r.perimeter) },
           ],
         });
         if (final && currentTool === 'area') label(pts[0], fmtArea(r.horizontal));
@@ -762,26 +763,26 @@ export default function CesiumViewer({
         set({
           tool: currentTool,
           lines: [
-            { label: 'Перепад высот Δh', value: fmtLength(r.dh) },
-            { label: 'Отметка 1', value: `${heightOf(pts[0]).toFixed(3)} м` },
-            { label: 'Отметка 2', value: `${heightOf(pts[1]).toFixed(3)} м` },
-            { label: 'Горизонтальное расстояние', value: fmtLength(r.horizontal) },
-            { label: 'Уклон', value: `${slope.toFixed(2)} %` },
+            { label: tr('Перепад высот Δh'), value: fmtLength(r.dh) },
+            { label: tr('Отметка 1'), value: `${heightOf(pts[0]).toFixed(3)} м` },
+            { label: tr('Отметка 2'), value: `${heightOf(pts[1]).toFixed(3)} м` },
+            { label: tr('Горизонтальное расстояние'), value: fmtLength(r.horizontal) },
+            { label: tr('Уклон'), value: `${slope.toFixed(2)} %` },
           ],
         });
         if (final) label(pts[1], `Δh ${r.dh.toFixed(3)} м`);
       } else if (currentTool === 'profile' && pts.length === 2) {
         const r = polylineLength(pts);
-        set({ tool: currentTool, lines: [{ label: 'Длина разреза', value: fmtLength(r.horizontal) }] });
+        set({ tool: currentTool, lines: [{ label: tr('Длина разреза'), value: fmtLength(r.horizontal) }] });
         if (final) {
           const a = toLonLatH(pts[0]);
           const b = toLonLatH(pts[1]);
           store().setProfileLine({ a: [a.lon, a.lat], b: [b.lon, b.lat] });
-          label(pts[1], 'Разрез');
+          label(pts[1], tr('Разрез'));
         }
       } else if (currentTool === 'angle' && pts.length === 3) {
         const a = angleAt(pts[0], pts[1], pts[2]);
-        set({ tool: currentTool, lines: [{ label: 'Угол', value: `${a.toFixed(2)}°` }] });
+        set({ tool: currentTool, lines: [{ label: tr('Угол'), value: `${a.toFixed(2)}°` }] });
         if (final) label(pts[1], `${a.toFixed(2)}°`);
       }
     }
@@ -790,7 +791,7 @@ export default function CesiumViewer({
       const set = store().setMeasurement;
       const { samples, cellArea } = volumeSampleGrid(pts);
       const base = pts.reduce((s, p) => s + heightOf(p), 0) / pts.length;
-      set({ tool: 'volume', lines: [{ label: 'Объём', value: `расчёт по ${samples.length} точкам…` }] });
+      set({ tool: 'volume', lines: [{ label: tr('Объём'), value: `расчёт по ${samples.length} точкам…` }] });
       try {
         const sampled = await viewer!.scene.sampleHeightMostDetailed(samples);
         const r = volumeAgainstBase(sampled.map((c) => c?.height), cellArea, base);
@@ -798,16 +799,16 @@ export default function CesiumViewer({
         set({
           tool: 'volume',
           lines: [
-            { label: 'Объём выше базы (насыпь)', value: fmtVolume(r.above) },
-            { label: 'Объём ниже базы (выемка)', value: fmtVolume(r.below) },
-            { label: 'Отметка базы (средняя по контуру)', value: `${base.toFixed(3)} м` },
-            { label: 'Площадь (в плане)', value: fmtArea(area.horizontal) },
-            { label: 'Точек выборки', value: `${r.valid} / ${samples.length}` },
+            { label: tr('Объём выше базы (насыпь)'), value: fmtVolume(r.above) },
+            { label: tr('Объём ниже базы (выемка)'), value: fmtVolume(r.below) },
+            { label: tr('Отметка базы (средняя по контуру)'), value: `${base.toFixed(3)} м` },
+            { label: tr('Площадь (в плане)'), value: fmtArea(area.horizontal) },
+            { label: tr('Точек выборки'), value: `${r.valid} / ${samples.length}` },
           ],
         });
         label(pts[0], `${fmtVolume(r.above)} / −${fmtVolume(r.below)}`);
       } catch {
-        set({ tool: 'volume', lines: [{ label: 'Объём', value: 'не удалось получить высоты сцены' }] });
+        set({ tool: 'volume', lines: [{ label: tr('Объём'), value: tr('не удалось получить высоты сцены') }] });
       }
     }
 
@@ -849,7 +850,7 @@ export default function CesiumViewer({
         } else if (picked?.id instanceof Entity && picked.id.properties) {
           const props: Record<string, unknown> = {};
           for (const name of picked.id.properties.propertyNames) props[name] = picked.id.properties[name]?.getValue();
-          store().setSelection({ kind: 'feature', title: picked.id.name ?? 'Объект ГИС', properties: props });
+          store().setSelection({ kind: 'feature', title: picked.id.name ?? tr('Объект ГИС'), properties: props });
         } else {
           store().setSelection(null);
         }
@@ -864,9 +865,9 @@ export default function CesiumViewer({
         addPoint(p);
         const llh = toLonLatH(p);
         const lines = [
-          { label: 'Широта', value: `${llh.lat.toFixed(7)}°` },
-          { label: 'Долгота', value: `${llh.lon.toFixed(7)}°` },
-          { label: 'Высота (эллипсоид)', value: `${llh.h.toFixed(3)} м` },
+          { label: tr('Широта'), value: `${llh.lat.toFixed(7)}°` },
+          { label: tr('Долгота'), value: `${llh.lon.toFixed(7)}°` },
+          { label: tr('Высота (эллипсоид)'), value: `${llh.h.toFixed(3)} м` },
         ];
         const fwd = crsRef.current.forward;
         if (fwd) {

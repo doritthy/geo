@@ -27,23 +27,25 @@ import UploadDialog from '@/components/twin/UploadDialog';
 import { ClipPanel, MeasurementCard, TimelineBar, ToolPalette } from '@/components/twin/ViewportOverlays';
 import { Icons, IconButton } from '@/components/twin/ui';
 import ProfileChart from '@/components/twin/ProfileChart';
+import { tr } from '@/lib/i18n';
+import LangSwitch from '@/components/LangSwitch';
 
 const CesiumViewer = dynamic(() => import('@/components/twin/CesiumViewer'), {
   ssr: false,
-  loading: () => <div className="flex h-full items-center justify-center text-sm text-text-secondary">Загрузка 3D-движка…</div>,
+  loading: () => <div className="flex h-full items-center justify-center text-sm text-text-secondary">{tr('Загрузка 3D-движка…')}</div>,
 });
 
 const PANELS: { key: SidePanel; title: string; icon: JSX.Element }[] = [
-  { key: 'layers', title: 'Слои', icon: Icons.layers },
-  { key: 'search', title: 'Поиск элементов', icon: Icons.search },
-  { key: 'issues', title: 'Предписания и замечания', icon: Icons.issue },
-  { key: 'annotations', title: 'Метки', icon: Icons.annotate },
-  { key: 'documents', title: 'Документы ПД/РД', icon: Icons.docs },
-  { key: 'compare', title: 'Сравнение версий', icon: Icons.compare },
-  { key: 'analysis', title: 'План — факт: отклонения', icon: Icons.analysis },
-  { key: 'schedule', title: '4D: график работ', icon: Icons.schedule },
+  { key: 'layers', title: tr('Слои'), icon: Icons.layers },
+  { key: 'search', title: tr('Поиск элементов'), icon: Icons.search },
+  { key: 'issues', title: tr('Предписания и замечания'), icon: Icons.issue },
+  { key: 'annotations', title: tr('Метки'), icon: Icons.annotate },
+  { key: 'documents', title: tr('Документы ПД/РД'), icon: Icons.docs },
+  { key: 'compare', title: tr('Сравнение версий'), icon: Icons.compare },
+  { key: 'analysis', title: tr('План — факт: отклонения'), icon: Icons.analysis },
+  { key: 'schedule', title: tr('4D: график работ'), icon: Icons.schedule },
   { key: 'autodesk', title: 'Autodesk ACC / BIM 360', icon: Icons.cloud },
-  { key: 'settings', title: 'Настройки проекта', icon: Icons.settings },
+  { key: 'settings', title: tr('Настройки проекта'), icon: Icons.settings },
 ];
 
 function TwinWorkspace({ projectId }: { projectId: string }) {
@@ -86,7 +88,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
     twinApi
       .getProject(projectId)
       .then(setProject)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Не удалось загрузить проект'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : tr('Не удалось загрузить проект')));
     loadAssets().catch(() => {});
     loadAnnotations().catch(() => {});
     twinApi.listIssues(projectId, { status: 'open,in_progress,review' }).then(useTwinStore.getState().setIssues).catch(() => {});
@@ -137,11 +139,11 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-3 bg-bg text-text-secondary">
         <p>{error}</p>
-        <Link href="/projects" className="rounded-md border border-bg-border px-4 py-2 text-sm hover:text-text-primary">К проектам</Link>
+        <Link href="/projects" className="rounded-md border border-bg-border px-4 py-2 text-sm hover:text-text-primary">{tr('К проектам')}</Link>
       </div>
     );
   }
-  if (!project) return <div className="flex h-screen items-center justify-center bg-bg text-text-secondary">Загрузка проекта…</div>;
+  if (!project) return <div className="flex h-screen items-center justify-center bg-bg text-text-secondary">{tr('Загрузка проекта…')}</div>;
 
   const panelTitle = PANELS.find((p) => p.key === panel)?.title;
 
@@ -149,10 +151,10 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
     <div className="flex h-[100dvh] flex-col bg-bg">
       <link rel="stylesheet" href="/cesium/Widgets/widgets.css" />
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-bg-border bg-bg-panel px-2 sm:px-3">
-        <button className="sm:hidden" onClick={() => setPanelOpen(!panelOpen)} aria-label="Меню">{Icons.menu}</button>
+        <button className="sm:hidden" onClick={() => setPanelOpen(!panelOpen)} aria-label={tr('Меню')}>{Icons.menu}</button>
         <Link href="/projects" className="flex items-center gap-2">
           <div className="h-6 w-6 rounded bg-gradient-to-br from-accent-amber to-accent-teal" />
-          <span className="hidden text-sm font-semibold lg:inline">Цифровой двойник</span>
+          <span className="hidden text-sm font-semibold lg:inline">{tr('Цифровой двойник')}</span>
         </Link>
         <span className="truncate text-sm text-text-secondary">/ {project.name}</span>
         <div className="ml-2 hidden rounded-md border border-bg-border bg-bg-panel2 p-0.5 sm:flex">
@@ -160,25 +162,26 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
             {Icons.cube} 3D
           </button>
           <button onClick={() => setPlanView(true)} className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs ${planView ? 'bg-accent-teal text-bg' : 'text-text-secondary'}`}>
-            {Icons.plan} План 2D
+            {Icons.plan} {tr('План 2D')}
           </button>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={() => setUploadOpen(true)} className="flex items-center gap-1 rounded-md bg-accent-teal px-2.5 py-1.5 text-xs font-semibold text-bg hover:bg-accent-teal/90">
-            {Icons.upload}<span className="hidden sm:inline">Загрузить</span>
+            {Icons.upload}<span className="hidden sm:inline">{tr('Загрузить')}</span>
           </button>
           <Link href={`/twin/${projectId}/dashboard`} className="rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary">
-            Дашборд
+            {tr('Дашборд')}
           </Link>
           <Link href={`/projects/${projectId}`} className="hidden rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary md:inline">
-            Геология
+            {tr('Геология')}
           </Link>
+          <LangSwitch />
           <span className="hidden text-xs text-text-secondary lg:inline">{user?.full_name ?? user?.email}</span>
           <button
             onClick={() => { clearAuth(); router.push('/login'); }}
             className="rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary"
           >
-            Выйти
+            {tr('Выйти')}
           </button>
         </div>
       </header>
@@ -207,7 +210,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
                   {p.icon}
                 </IconButton>
               ))}
-              <IconButton title="Закрыть" className="ml-auto" onClick={() => setPanelOpen(false)}>{Icons.close}</IconButton>
+              <IconButton title={tr('Закрыть')} className="ml-auto" onClick={() => setPanelOpen(false)}>{Icons.close}</IconButton>
             </div>
             <div className="border-b border-bg-border px-3 py-2 text-sm font-semibold">{panelTitle}</div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">

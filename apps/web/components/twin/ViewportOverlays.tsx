@@ -6,18 +6,19 @@
 import { useMemo, useState } from 'react';
 import { useTwinStore, type ToolMode } from '@/lib/twin/store';
 import { Icons, IconButton } from './ui';
+import { tr } from '@/lib/i18n';
 
 const TOOLS: { key: ToolMode; title: string; icon: JSX.Element }[] = [
-  { key: 'select', title: 'Выбор элемента', icon: Icons.select },
-  { key: 'point', title: 'Координаты и отметка точки', icon: Icons.point },
-  { key: 'distance', title: 'Расстояние (двойной клик / ПКМ — завершить)', icon: Icons.distance },
-  { key: 'area', title: 'Площадь', icon: Icons.area },
-  { key: 'height', title: 'Перепад высот', icon: Icons.height },
-  { key: 'angle', title: 'Угол (3 точки)', icon: Icons.angle },
-  { key: 'volume', title: 'Объём (насыпь / выемка)', icon: Icons.volume },
-  { key: 'profile', title: 'Профиль-разрез: BIM против скана', icon: Icons.profile },
-  { key: 'annotate', title: 'Добавить метку', icon: Icons.annotate },
-  { key: 'issue', title: 'Новое предписание в точке', icon: Icons.issue },
+  { key: 'select', title: tr('Выбор элемента'), icon: Icons.select },
+  { key: 'point', title: tr('Координаты и отметка точки'), icon: Icons.point },
+  { key: 'distance', title: tr('Расстояние (двойной клик / ПКМ — завершить)'), icon: Icons.distance },
+  { key: 'area', title: tr('Площадь'), icon: Icons.area },
+  { key: 'height', title: tr('Перепад высот'), icon: Icons.height },
+  { key: 'angle', title: tr('Угол (3 точки)'), icon: Icons.angle },
+  { key: 'volume', title: tr('Объём (насыпь / выемка)'), icon: Icons.volume },
+  { key: 'profile', title: tr('Профиль-разрез: BIM против скана'), icon: Icons.profile },
+  { key: 'annotate', title: tr('Добавить метку'), icon: Icons.annotate },
+  { key: 'issue', title: tr('Новое предписание в точке'), icon: Icons.issue },
 ];
 
 export function ToolPalette({ onToggleClip, clipOpen }: { onToggleClip: () => void; clipOpen: boolean }) {
@@ -35,25 +36,25 @@ export function ToolPalette({ onToggleClip, clipOpen }: { onToggleClip: () => vo
         </IconButton>
       ))}
       <div className="my-0.5 h-px bg-bg-border" />
-      <IconButton title="Сечение" active={clipOpen} onClick={onToggleClip}>{Icons.section}</IconButton>
-      <IconButton title="Прозрачная земля (подземная часть)" active={globeTranslucent} onClick={() => setGlobeTranslucent(!globeTranslucent)}>
+      <IconButton title={tr('Сечение')} active={clipOpen} onClick={onToggleClip}>{Icons.section}</IconButton>
+      <IconButton title={tr('Прозрачная земля (подземная часть)')} active={globeTranslucent} onClick={() => setGlobeTranslucent(!globeTranslucent)}>
         {Icons.globe}
       </IconButton>
-      <IconButton title="Очистить измерения (Esc)" onClick={clearMeasurements}>{Icons.clear}</IconButton>
+      <IconButton title={tr('Очистить измерения (Esc)')} onClick={clearMeasurements}>{Icons.clear}</IconButton>
     </div>
   );
 }
 
 const TOOL_HINTS: Partial<Record<ToolMode, string>> = {
-  point: 'Кликните по модели или местности',
-  distance: 'Кликайте точки; двойной клик или ПКМ — завершить',
-  area: 'Обведите контур; двойной клик или ПКМ — завершить',
-  height: 'Укажите две точки',
-  angle: 'Укажите три точки: начало, вершину, конец',
-  volume: 'Обведите контур объёма; база — средняя отметка контура',
-  annotate: 'Кликните место для метки',
-  issue: 'Кликните место нарушения на модели',
-  profile: 'Укажите начало и конец линии разреза',
+  point: tr('Кликните по модели или местности'),
+  distance: tr('Кликайте точки; двойной клик или ПКМ — завершить'),
+  area: tr('Обведите контур; двойной клик или ПКМ — завершить'),
+  height: tr('Укажите две точки'),
+  angle: tr('Укажите три точки: начало, вершину, конец'),
+  volume: tr('Обведите контур объёма; база — средняя отметка контура'),
+  annotate: tr('Кликните место для метки'),
+  issue: tr('Кликните место нарушения на модели'),
+  profile: tr('Укажите начало и конец линии разреза'),
 };
 
 export function MeasurementCard() {
@@ -79,10 +80,10 @@ export function ClipPanel({ heightRange }: { heightRange: [number, number] }) {
   const [lo, hi] = heightRange;
   return (
     <div className="absolute left-16 top-3 z-10 w-72 max-w-[calc(100%-5rem)] space-y-3 rounded-xl border border-bg-border bg-bg-panel/95 p-3 text-xs backdrop-blur">
-      <div className="font-semibold">Сечения</div>
+      <div className="font-semibold">{tr('Сечения')}</div>
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={clip.horizontal} onChange={(e) => setClip({ horizontal: e.target.checked, height: clip.height || (lo + hi) / 2 })} />
-        Горизонтальное (по отметке)
+        {tr('Горизонтальное (по отметке)')}
       </label>
       {clip.horizontal && (
         <div>
@@ -100,7 +101,7 @@ export function ClipPanel({ heightRange }: { heightRange: [number, number] }) {
       )}
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={clip.vertical} onChange={(e) => setClip({ vertical: e.target.checked })} />
-        Вертикальное (разрез)
+        {tr('Вертикальное (разрез)')}
       </label>
       {clip.vertical && (
         <div className="space-y-2">
@@ -145,10 +146,10 @@ export function TimelineBar() {
         <button
           onClick={() => setTimeline(!enabled, date ?? dates[dates.length - 1])}
           className={`flex items-center gap-1 ${enabled ? 'text-accent-teal' : 'text-text-secondary hover:text-text-primary'}`}
-          title="Временная шкала мониторинга"
+          title={tr('Временная шкала мониторинга')}
         >
           {Icons.clock}
-          <span className="hidden sm:inline">Мониторинг</span>
+          <span className="hidden sm:inline">{tr('Мониторинг')}</span>
         </button>
         <input
           type="range"
@@ -160,7 +161,7 @@ export function TimelineBar() {
           className="flex-1"
         />
         <span className="w-24 text-right text-text-primary">
-          {enabled ? new Date(dates[idx]).toLocaleDateString('ru-RU') : 'все съёмки'}
+          {enabled ? new Date(dates[idx]).toLocaleDateString('ru-RU') : tr('все съёмки')}
         </span>
       </div>
       {enabled && (

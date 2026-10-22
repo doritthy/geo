@@ -2,6 +2,7 @@
 // "Construction digital twin" section).
 
 export type AssetKind = 'bim' | 'point_cloud' | 'mesh';
+import { tr } from '@/lib/i18n';
 export type DocType = 'pd' | 'rd' | 'other';
 
 export interface AnchorGeoref {
@@ -186,14 +187,14 @@ export interface TwinUploadOptions {
 }
 
 export const DOC_TYPE_LABELS: Record<DocType, string> = {
-  pd: 'ПД',
-  rd: 'РД',
-  other: 'Прочее',
+  pd: tr('ПД'),
+  rd: tr('РД'),
+  other: tr('Прочее'),
 };
 
 export const KIND_LABELS: Record<AssetKind, string> = {
-  bim: 'BIM-модели',
-  point_cloud: 'Облака точек',
+  bim: tr('BIM-модели'),
+  point_cloud: tr('Облака точек'),
   mesh: 'Reality Capture',
 };
 
@@ -298,24 +299,24 @@ export interface Member {
 }
 
 export const ISSUE_STATUS: Record<IssueStatus, { label: string; color: string }> = {
-  open: { label: 'Открыто', color: '#EF4444' },
-  in_progress: { label: 'В работе', color: '#F59E0B' },
-  review: { label: 'На проверке', color: '#3B82F6' },
-  closed: { label: 'Закрыто', color: '#22C55E' },
+  open: { label: tr('Открыто'), color: '#EF4444' },
+  in_progress: { label: tr('В работе'), color: '#F59E0B' },
+  review: { label: tr('На проверке'), color: '#3B82F6' },
+  closed: { label: tr('Закрыто'), color: '#22C55E' },
 };
 
 export const ISSUE_NEXT: Record<IssueStatus, { to: IssueStatus; label: string }[]> = {
-  open: [{ to: 'in_progress', label: 'Взять в работу' }, { to: 'closed', label: 'Закрыть' }],
-  in_progress: [{ to: 'review', label: 'На проверку' }, { to: 'open', label: 'Вернуть' }],
-  review: [{ to: 'closed', label: 'Принять и закрыть' }, { to: 'in_progress', label: 'Вернуть в работу' }],
-  closed: [{ to: 'open', label: 'Переоткрыть' }],
+  open: [{ to: 'in_progress', label: tr('Взять в работу') }, { to: 'closed', label: tr('Закрыть') }],
+  in_progress: [{ to: 'review', label: tr('На проверку') }, { to: 'open', label: tr('Вернуть') }],
+  review: [{ to: 'closed', label: tr('Принять и закрыть') }, { to: 'in_progress', label: tr('Вернуть в работу') }],
+  closed: [{ to: 'open', label: tr('Переоткрыть') }],
 };
 
 export const PRIORITY_LABELS: Record<IssuePriority, string> = {
-  low: 'Низкий',
-  normal: 'Обычный',
-  high: 'Высокий',
-  critical: 'Критический',
+  low: tr('Низкий'),
+  normal: tr('Обычный'),
+  high: tr('Высокий'),
+  critical: tr('Критический'),
 };
 
 export type TaskStatus = 'done' | 'in_progress' | 'late' | 'not_started' | 'future';
@@ -351,9 +352,9 @@ export interface ScheduleMetrics {
 }
 
 export const TASK_STATUS: Record<TaskStatus, { label: string; color: string }> = {
-  done: { label: 'Выполнено', color: '#22C55E' },
-  in_progress: { label: 'В работе', color: '#FACC15' },
-  late: { label: 'С отставанием', color: '#EF4444' },
-  not_started: { label: 'Не начато', color: '#94A3B8' },
-  future: { label: 'По плану позже', color: 'rgba(148,163,184,0.18)' },
+  done: { label: tr('Выполнено'), color: '#22C55E' },
+  in_progress: { label: tr('В работе'), color: '#FACC15' },
+  late: { label: tr('С отставанием'), color: '#EF4444' },
+  not_started: { label: tr('Не начато'), color: '#94A3B8' },
+  future: { label: tr('По плану позже'), color: 'rgba(148,163,184,0.18)' },
 };

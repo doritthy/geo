@@ -6,6 +6,7 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { TASK_STATUS, type Analysis, type ScheduleMetrics, type ScheduleTask } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Input, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString('ru-RU') : '—');
 const pct = (v?: number | null) => (v === null || v === undefined ? '—' : `${v.toFixed(1)} %`);
@@ -36,11 +37,11 @@ function TaskLinker({ task, onDone }: { task: ScheduleTask; onDone: () => void }
       setMsg(`Привязано: +${r.linked} (всего ${r.total})`);
       onDone();
     } catch (err) {
-      setMsg(err instanceof ApiError ? err.detail : 'Ошибка');
+      setMsg(err instanceof ApiError ? err.detail : tr('Ошибка'));
     }
   }
 
-  if (!models.length) return <div className="text-xs text-text-muted">Нет BIM-модели для привязки</div>;
+  if (!models.length) return <div className="text-xs text-text-muted">{tr('Нет BIM-модели для привязки')}</div>;
   return (
     <div className="space-y-2 rounded-md bg-bg/60 p-2">
       <Select value={assetId} onChange={(e) => setAssetId(e.target.value)}>
@@ -48,20 +49,20 @@ function TaskLinker({ task, onDone }: { task: ScheduleTask; onDone: () => void }
       </Select>
       <div className="grid grid-cols-2 gap-2">
         <Select value={ifcType} onChange={(e) => setIfcType(e.target.value)}>
-          <option value="">Все классы</option>
+          <option value="">{tr('Все классы')}</option>
           {Object.keys(asset?.stats.ifc_types ?? {}).map((t) => <option key={t} value={t}>{t.replace(/^Ifc/, '')}</option>)}
         </Select>
         <Select value={storey} onChange={(e) => setStorey(e.target.value)}>
-          <option value="">Все этажи</option>
+          <option value="">{tr('Все этажи')}</option>
           {Object.keys(asset?.stats.storeys ?? {}).map((s) => <option key={s} value={s}>{s}</option>)}
         </Select>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => link(true)} disabled={!ifcType && !storey}>Привязать по фильтру</Button>
-        {selection?.kind === 'element' && selection.assetId && <Button onClick={() => link(false)}>Выбранный элемент</Button>}
+        <Button variant="primary" onClick={() => link(true)} disabled={!ifcType && !storey}>{tr('Привязать по фильтру')}</Button>
+        {selection?.kind === 'element' && selection.assetId && <Button onClick={() => link(false)}>{tr('Выбранный элемент')}</Button>}
         {task.element_count > 0 && (
-          <Button variant="danger" onClick={async () => { await twinApi.unlinkTask(task.id); setMsg('Привязки удалены'); onDone(); }}>
-            Отвязать все
+          <Button variant="danger" onClick={async () => { await twinApi.unlinkTask(task.id); setMsg(tr('Привязки удалены')); onDone(); }}>
+            {tr('Отвязать все')}
           </Button>
         )}
       </div>
@@ -98,9 +99,9 @@ function TaskRow({ task, depth, onChanged }: { task: ScheduleTask; depth: number
           </div>
           <div className="flex items-center gap-2">
             <Input value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal" className="w-20" />
-            <span className="text-xs text-text-secondary">% факт</span>
+            <span className="text-xs text-text-secondary">{tr('% факт')}</span>
             <Button onClick={async () => { await twinApi.updateTask(task.id, { percent_complete: Number(value.replace(',', '.')) }); onChanged(); }}>
-              Сохранить
+              {tr('Сохранить')}
             </Button>
           </div>
           <TaskLinker task={task} onDone={onChanged} />
@@ -168,7 +169,7 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
       setTasks(r.tasks);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Импорт не удался');
+      setError(err instanceof ApiError ? err.detail : tr('Импорт не удался'));
     }
   }
 
@@ -195,7 +196,7 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <label className="cursor-pointer rounded-md bg-accent-teal px-3 py-1.5 text-xs font-semibold text-bg hover:bg-accent-teal/90">
-          {tasks.length ? 'Обновить график' : 'Загрузить график'}
+          {tasks.length ? tr('Обновить график') : tr('Загрузить график')}
           <input type="file" accept=".xml,.xlsx,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
         </label>
         <span className="text-[11px] text-text-muted">MS Project XML, Excel, CSV</span>
@@ -203,12 +204,11 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
       {error && <ErrorBox>{error}</ErrorBox>}
       {!tasks.length ? (
         <Empty>
-          Загрузите график работ. Из MS Project: «Файл → Сохранить как → XML». В Excel нужны колонки «Наименование», «Начало»,
-          «Окончание» и при желании «% выполнения», «Стоимость».
+          {tr('Загрузите график работ. Из MS Project: «Файл → Сохранить как → XML». В Excel нужны колонки «Наименование», «Начало», «Окончание» и при желании «% выполнения», «Стоимость».')}
         </Empty>
       ) : (
         <>
-          <Field label="Отчётная дата">
+          <Field label={tr('Отчётная дата')}>
             <Input type="date" value={on} onChange={(e) => setOn(e.target.value)} />
           </Field>
           {span && (
@@ -219,30 +219,30 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
           )}
           {metrics && (
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-bg-border p-2.5 text-xs">
-              <span className="text-text-secondary">План / факт</span>
+              <span className="text-text-secondary">{tr('План / факт')}</span>
               <span className="text-right">{pct(metrics.planned_percent)} / <b>{pct(metrics.actual_percent)}</b></span>
               <span className="text-text-secondary">SPI</span>
               <span className={`text-right font-semibold ${metrics.spi && metrics.spi < 0.95 ? 'text-red-400' : 'text-accent-teal'}`}>
                 {metrics.spi ? metrics.spi.toFixed(2) : '—'}
               </span>
-              <span className="text-text-secondary">Окончание по плану</span>
+              <span className="text-text-secondary">{tr('Окончание по плану')}</span>
               <span className="text-right">{fmtDate(metrics.finish)}</span>
-              <span className="text-text-secondary">Прогноз (по темпу)</span>
+              <span className="text-text-secondary">{tr('Прогноз (по темпу)')}</span>
               <span className={`text-right ${metrics.delay_days && metrics.delay_days > 0 ? 'text-red-400' : ''}`}>
                 {fmtDate(metrics.forecast_finish)}
                 {metrics.delay_days ? ` (${metrics.delay_days > 0 ? '+' : ''}${metrics.delay_days} дн.)` : ''}
               </span>
-              <span className="text-text-secondary">Задач с отставанием</span>
+              <span className="text-text-secondary">{tr('Задач с отставанием')}</span>
               <span className="text-right">{metrics.late_tasks ?? 0} из {metrics.tasks ?? 0}</span>
               <span className="col-span-2 text-[10px] text-text-muted">
-                Вес задач: {metrics.weight === 'cost' ? 'стоимость' : 'длительность'}. Прогноз — линейная экстраполяция по SPI.
+                Вес задач: {metrics.weight === 'cost' ? tr('стоимость') : tr('длительность')}. Прогноз — линейная экстраполяция по SPI.
               </span>
             </div>
           )}
           <div className="space-y-2 rounded-lg border border-bg-border p-2.5">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={mode4d} onChange={(e) => setMode4d(e.target.checked)} />
-              4D: раскрасить модель на отчётную дату
+              {tr('4D: раскрасить модель на отчётную дату')}
             </label>
             {models.length > 1 && (
               <Select value={modelId} onChange={(e) => setModelId(e.target.value)}>
@@ -258,7 +258,7 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
             </div>
             {analyses.length > 0 && (
               <Button onClick={async () => { const r = await twinApi.progressFromAnalysis(projectId, analyses[0].id); setTasks(r.tasks); load(); }}>
-                Факт по последнему скану
+                {tr('Факт по последнему скану')}
               </Button>
             )}
           </div>

@@ -6,13 +6,14 @@ import { ApiError } from '@/lib/api';
 import { useTwinStore } from '@/lib/twin/store';
 import type { TwinProject, TwinUploadCategory, TwinUploadOptions } from '@/lib/twin/types';
 import { Button, ErrorBox, Field, Icons, Input, Select, formatBytes } from './ui';
+import { tr } from '@/lib/i18n';
 
 const CATEGORIES: { key: TwinUploadCategory; label: string; accept: string; hint: string }[] = [
-  { key: 'bim', label: 'BIM-модель', accept: '.ifc', hint: 'IFC 2x3 / IFC 4 / 4.3. RVT — экспорт в IFC или через интеграцию Autodesk.' },
-  { key: 'point_cloud', label: 'Облако точек', accept: '.las,.laz,.e57,.xyz,.pts,.txt,.csv', hint: 'LAS / LAZ / E57 / XYZ. Строится LOD-октодерево для потокового просмотра.' },
-  { key: 'reality_mesh', label: 'Reality Capture (mesh)', accept: '.obj,.ply,.glb,.gltf,.stl,.zip', hint: 'OBJ (ZIP с MTL и текстурами), PLY, GLB/glTF или ZIP с готовым 3D Tiles (Metashape / Pix4D / ContextCapture).' },
-  { key: 'map_vector', label: 'ГИС / CAD вектор', accept: '.geojson,.json,.kml,.kmz,.dxf,.gpkg,.zip,.shp', hint: 'GeoJSON, KML/KMZ, DXF, GeoPackage, Shapefile (ZIP).' },
-  { key: 'map_raster', label: 'Растр / ортофото', accept: '.tif,.tiff', hint: 'GeoTIFF (ортофотоплан, подложка).' },
+  { key: 'bim', label: tr('BIM-модель'), accept: '.ifc', hint: tr('IFC 2x3 / IFC 4 / 4.3. RVT — экспорт в IFC или через интеграцию Autodesk.') },
+  { key: 'point_cloud', label: tr('Облако точек'), accept: '.las,.laz,.e57,.xyz,.pts,.txt,.csv', hint: tr('LAS / LAZ / E57 / XYZ. Строится LOD-октодерево для потокового просмотра.') },
+  { key: 'reality_mesh', label: 'Reality Capture (mesh)', accept: '.obj,.ply,.glb,.gltf,.stl,.zip', hint: tr('OBJ (ZIP с MTL и текстурами), PLY, GLB/glTF или ZIP с готовым 3D Tiles (Metashape / Pix4D / ContextCapture).') },
+  { key: 'map_vector', label: tr('ГИС / CAD вектор'), accept: '.geojson,.json,.kml,.kmz,.dxf,.gpkg,.zip,.shp', hint: 'GeoJSON, KML/KMZ, DXF, GeoPackage, Shapefile (ZIP).' },
+  { key: 'map_raster', label: tr('Растр / ортофото'), accept: '.tif,.tiff', hint: tr('GeoTIFF (ортофотоплан, подложка).') },
 ];
 
 export default function UploadDialog({
@@ -79,7 +80,7 @@ export default function UploadDialog({
       onUploaded();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Ошибка загрузки');
+      setError(err instanceof ApiError ? err.detail : tr('Ошибка загрузки'));
       setProgress(null);
     }
   }
@@ -92,7 +93,7 @@ export default function UploadDialog({
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-bg-border bg-bg-panel p-5 shadow-2xl sm:rounded-2xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Загрузка данных</h2>
+          <h2 className="text-base font-semibold">{tr('Загрузка данных')}</h2>
           <button type="button" onClick={onClose} className="text-text-secondary hover:text-text-primary">{Icons.close}</button>
         </div>
 
@@ -112,27 +113,27 @@ export default function UploadDialog({
 
         <label className="mb-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-bg-border px-4 py-6 text-center hover:border-accent-teal/60">
           <span className="text-text-secondary">{Icons.upload}</span>
-          <span className="mt-1 text-sm">{file ? file.name : 'Выберите файл'}</span>
+          <span className="mt-1 text-sm">{file ? file.name : tr('Выберите файл')}</span>
           {file && <span className="text-[11px] text-text-muted">{formatBytes(file.size)}</span>}
           <input type="file" accept={cat.accept} className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </label>
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Название слоя">
+            <Field label={tr('Название слоя')}>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={file?.name.replace(/\.[^.]+$/, '') ?? ''} />
             </Field>
             {is3d && (
-              <Field label="Дата съёмки / выпуска">
+              <Field label={tr('Дата съёмки / выпуска')}>
                 <Input type="date" value={capturedAt} onChange={(e) => setCapturedAt(e.target.value)} />
               </Field>
             )}
           </div>
 
           {category === 'bim' && bimGroups.length > 0 && (
-            <Field label="Версионирование">
+            <Field label={tr('Версионирование')}>
               <Select value={replaces} onChange={(e) => setReplaces(e.target.value)}>
-                <option value="">Новая модель</option>
+                <option value="">{tr('Новая модель')}</option>
                 {bimGroups.map((a) => (
                   <option key={a.id} value={a.id}>Новая версия: {a.name} (сейчас v{a.version})</option>
                 ))}
@@ -140,36 +141,36 @@ export default function UploadDialog({
             </Field>
           )}
 
-          <Field label="Система координат исходных данных" hint={is3d ? 'Пусто — СК проекта или из файла (IfcMapConversion, LAS).' : 'Для DXF и файлов без .prj.'}>
+          <Field label={tr('Система координат исходных данных')} hint={is3d ? tr('Пусто — СК проекта или из файла (IfcMapConversion, LAS).') : tr('Для DXF и файлов без .prj.')}>
             <Input value={crs} onChange={(e) => setCrs(e.target.value)} placeholder="EPSG:32642" />
           </Field>
 
           {is3d && (
             <details className="rounded-md border border-bg-border px-3 py-2">
-              <summary className="cursor-pointer text-xs text-text-secondary">Привязка и параметры</summary>
+              <summary className="cursor-pointer text-xs text-text-secondary">{tr('Привязка и параметры')}</summary>
               <div className="mt-3 space-y-3">
-                <Field label="Режим привязки">
+                <Field label={tr('Режим привязки')}>
                   <Select value={georefMode} onChange={(e) => setGeorefMode(e.target.value as typeof georefMode)}>
-                    <option value="auto">Авто (по файлу / СК)</option>
-                    <option value="absolute">Координаты модели в указанной СК</option>
-                    <option value="anchor">Локальная модель + точка привязки</option>
+                    <option value="auto">{tr('Авто (по файлу / СК)')}</option>
+                    <option value="absolute">{tr('Координаты модели в указанной СК')}</option>
+                    <option value="anchor">{tr('Локальная модель + точка привязки')}</option>
                   </Select>
                 </Field>
                 <div className="grid grid-cols-2 gap-2">
-                  <Field label="Широта"><Input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="51.128" /></Field>
-                  <Field label="Долгота"><Input value={lon} onChange={(e) => setLon(e.target.value)} inputMode="decimal" placeholder="71.430" /></Field>
-                  <Field label="Высота, м"><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" /></Field>
-                  <Field label="Азимут оси Y, °"><Input value={heading} onChange={(e) => setHeading(e.target.value)} inputMode="decimal" /></Field>
+                  <Field label={tr('Широта')}><Input value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" placeholder="51.128" /></Field>
+                  <Field label={tr('Долгота')}><Input value={lon} onChange={(e) => setLon(e.target.value)} inputMode="decimal" placeholder="71.430" /></Field>
+                  <Field label={tr('Высота, м')}><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" /></Field>
+                  <Field label={tr('Азимут оси Y, °')}><Input value={heading} onChange={(e) => setHeading(e.target.value)} inputMode="decimal" /></Field>
                 </div>
-                <Field label="Поправка высоты (геоид), м" hint="Нормальные высоты → эллипсоидальные: добавляется к Z.">
+                <Field label={tr('Поправка высоты (геоид), м')} hint={tr('Нормальные высоты → эллипсоидальные: добавляется к Z.')}>
                   <Input value={heightOffset} onChange={(e) => setHeightOffset(e.target.value)} inputMode="decimal" placeholder="0" />
                 </Field>
                 {category === 'reality_mesh' && (
-                  <Field label="Вертикальная ось">
+                  <Field label={tr('Вертикальная ось')}>
                     <Select value={upAxis} onChange={(e) => setUpAxis(e.target.value as typeof upAxis)}>
-                      <option value="">Авто (glTF — Y, остальные — Z)</option>
-                      <option value="z">Z вверх</option>
-                      <option value="y">Y вверх</option>
+                      <option value="">{tr('Авто (glTF — Y, остальные — Z)')}</option>
+                      <option value="z">{tr('Z вверх')}</option>
+                      <option value="y">{tr('Y вверх')}</option>
                     </Select>
                   </Field>
                 )}
@@ -183,14 +184,14 @@ export default function UploadDialog({
                 <div className="h-full bg-accent-teal transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
               </div>
               <div className="mt-1 text-[11px] text-text-muted">
-                {progress < 1 ? `Передача ${Math.round(progress * 100)}%` : 'Файл получен, запускается обработка…'}
+                {progress < 1 ? `Передача ${Math.round(progress * 100)}%` : tr('Файл получен, запускается обработка…')}
               </div>
             </div>
           )}
           {error && <ErrorBox>{error}</ErrorBox>}
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" onClick={onClose}>Отмена</Button>
-            <Button type="submit" variant="primary" disabled={!file || progress !== null}>Загрузить</Button>
+            <Button type="button" onClick={onClose}>{tr('Отмена')}</Button>
+            <Button type="submit" variant="primary" disabled={!file || progress !== null}>{tr('Загрузить')}</Button>
           </div>
         </div>
       </form>

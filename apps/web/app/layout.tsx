@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { cookies } from 'next/headers';
 import ServiceWorker from '@/components/ServiceWorker';
+import LangGate from '@/components/LangGate';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter', display: 'swap' });
 
@@ -20,10 +22,11 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const lang = cookies().get('lang')?.value === 'kk' ? 'kk' : 'ru';
   return (
-    <html lang="ru" className={inter.variable}>
+    <html lang={lang} className={inter.variable}>
       <body className="min-h-screen bg-bg font-sans text-text-primary antialiased">
-        {children}
+        {lang === 'ru' ? children : <LangGate>{children}</LangGate>}
         <ServiceWorker />
       </body>
     </html>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { request, ApiError } from '@/lib/api';
 import { Button, Empty, ErrorBox, Icons } from './ui';
+import { tr } from '@/lib/i18n';
 
 interface ApsNode {
   id: string;
@@ -23,10 +24,10 @@ interface LinkOut {
 }
 
 const STATUS: Record<LinkOut['status'], string> = {
-  pending: 'в очереди',
-  translating: 'конвертация RVT → IFC…',
-  ready: 'актуально',
-  error: 'ошибка',
+  pending: tr('в очереди'),
+  translating: tr('конвертация RVT → IFC…'),
+  ready: tr('актуально'),
+  error: tr('ошибка'),
 };
 
 const IMPORTABLE = /\.(ifc|rvt|nwd|nwc|dwg|las|laz|e57|obj|glb|gltf|ply|zip)$/i;
@@ -61,20 +62,20 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
       setIssueSync(await request(`/api/projects/${projectId}/autodesk/issues-sync`, {
         method: 'POST', body: JSON.stringify({ aps_project_id: apsProjectId }),
       }));
-      setSyncMsg('Проект ACC связан. Запустите синхронизацию.');
+      setSyncMsg(tr('Проект ACC связан. Запустите синхронизацию.'));
     } catch (err) {
-      setSyncMsg(err instanceof ApiError ? err.detail : 'Не удалось настроить');
+      setSyncMsg(err instanceof ApiError ? err.detail : tr('Не удалось настроить'));
     }
   }
 
   async function runIssueSync() {
-    setSyncMsg('Синхронизация…');
+    setSyncMsg(tr('Синхронизация…'));
     try {
       const r = await request<Record<string, number>>(`/api/projects/${projectId}/autodesk/issues-sync/run`, { method: 'POST' });
       setSyncMsg(`Отправлено новых: ${r.pushed_new}, обновлено в ACC: ${r.pushed_updates}, получено изменений: ${r.pulled_updates}, импортировано из ACC: ${r.imported}`);
       request<typeof issueSync>(`/api/projects/${projectId}/autodesk/issues-sync`).then(setIssueSync).catch(() => {});
     } catch (err) {
-      setSyncMsg(err instanceof ApiError ? err.detail : 'Ошибка синхронизации');
+      setSyncMsg(err instanceof ApiError ? err.detail : tr('Ошибка синхронизации'));
     }
   }
 
@@ -103,7 +104,7 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
       setItems(await request<ApsNode[]>(url));
       setPath(trail);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Ошибка Autodesk API');
+      setError(err instanceof ApiError ? err.detail : tr('Ошибка Autodesk API'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +138,7 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
       });
       loadLinks();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Импорт не удался');
+      setError(err instanceof ApiError ? err.detail : tr('Импорт не удался'));
     }
   }
 
@@ -148,12 +149,11 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
     window.location.href = url;
   }
 
-  if (!status) return <Empty>Загрузка…</Empty>;
+  if (!status) return <Empty>{tr('Загрузка…')}</Empty>;
   if (!status.configured) {
     return (
       <Empty>
-        Интеграция с Autodesk ACC / BIM 360 не настроена. Администратору: создайте приложение в APS
-        (aps.autodesk.com) и задайте APS_CLIENT_ID, APS_CLIENT_SECRET и APS_CALLBACK_URL на сервере.
+        {tr('Интеграция с Autodesk ACC / BIM 360 не настроена. Администратору: создайте приложение в APS (aps.autodesk.com) и задайте APS_CLIENT_ID, APS_CLIENT_SECRET и APS_CALLBACK_URL на сервере.')}
       </Empty>
     );
   }
@@ -162,13 +162,13 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
     <div className="space-y-4">
       {!status.connected ? (
         <div className="space-y-2">
-          <p className="text-xs text-text-secondary">Подключите аккаунт Autodesk, чтобы импортировать модели из ACC / BIM 360.</p>
-          <Button variant="primary" onClick={connect}>Войти через Autodesk</Button>
+          <p className="text-xs text-text-secondary">{tr('Подключите аккаунт Autodesk, чтобы импортировать модели из ACC / BIM 360.')}</p>
+          <Button variant="primary" onClick={connect}>{tr('Войти через Autodesk')}</Button>
         </div>
       ) : (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-1 text-xs">
-            <button className="text-accent-teal hover:underline" onClick={() => browse([])}>Хабы</button>
+            <button className="text-accent-teal hover:underline" onClick={() => browse([])}>{tr('Хабы')}</button>
             {path.map((p, i) => (
               <span key={p.node.id} className="flex items-center gap-1">
                 <span className="text-text-muted">/</span>
@@ -180,9 +180,9 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
           </div>
           {error && <ErrorBox>{error}</ErrorBox>}
           {loading ? (
-            <div className="text-xs text-text-muted">Загрузка…</div>
+            <div className="text-xs text-text-muted">{tr('Загрузка…')}</div>
           ) : items.length === 0 ? (
-            <Empty>Пусто</Empty>
+            <Empty>{tr('Пусто')}</Empty>
           ) : (
             <div className="space-y-1">
               {items.map((node) => (
@@ -191,7 +191,7 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
                     <>
                       <span className="min-w-0 flex-1 truncate">{node.name}</span>
                       {IMPORTABLE.test(node.name) && (
-                        <Button variant="primary" onClick={() => importItem(node)}>Импорт</Button>
+                        <Button variant="primary" onClick={() => importItem(node)}>{tr('Импорт')}</Button>
                       )}
                     </>
                   ) : (
@@ -206,7 +206,7 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
           )}
           {!status.webhooks && (
             <p className="text-[11px] text-text-muted">
-              Автообновление по вебхукам выключено (не задан APS_WEBHOOK_URL) — используйте «Синхр.».
+              {tr('Автообновление по вебхукам выключено (не задан APS_WEBHOOK_URL) — используйте «Синхр.».')}
             </p>
           )}
         </div>
@@ -214,32 +214,32 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
 
       {status.connected && (
         <div className="space-y-2 rounded-lg border border-bg-border p-3">
-          <div className="text-sm font-semibold">Предписания ↔ ACC Issues</div>
+          <div className="text-sm font-semibold">{tr('Предписания ↔ ACC Issues')}</div>
           {issueSync ? (
             <>
               <div className="text-[11px] text-text-muted">
                 Проект ACC {issueSync.aps_project_id.slice(0, 8)}… · последняя синхронизация{' '}
                 {issueSync.last_pulled_at ? new Date(issueSync.last_pulled_at).toLocaleString('ru-RU') : '—'}
               </div>
-              <Button variant="primary" onClick={runIssueSync}>Синхронизировать сейчас</Button>
+              <Button variant="primary" onClick={runIssueSync}>{tr('Синхронизировать сейчас')}</Button>
             </>
           ) : path.find((p) => p.node.type === 'projects') ? (
             <Button onClick={() => configureIssueSync(path.find((p) => p.node.type === 'projects')!.node.id)}>
               Связать с проектом «{path.find((p) => p.node.type === 'projects')!.node.name}»
             </Button>
           ) : (
-            <p className="text-[11px] text-text-muted">Откройте проект ACC в обзоре выше, чтобы связать с ним реестр предписаний.</p>
+            <p className="text-[11px] text-text-muted">{tr('Откройте проект ACC в обзоре выше, чтобы связать с ним реестр предписаний.')}</p>
           )}
           {syncMsg && <div className="text-[11px] text-text-secondary">{syncMsg}</div>}
           <p className="text-[10px] text-text-muted">
-            Статусы сопоставляются (На проверке ↔ in_review). Исполнители и «булавки» на чертежах не переносятся — ограничение API ACC.
+            {tr('Статусы сопоставляются (На проверке ↔ in_review). Исполнители и «булавки» на чертежах не переносятся — ограничение API ACC.')}
           </p>
         </div>
       )}
 
       {links.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">Связанные модели</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">{tr('Связанные модели')}</div>
           {links.map((l) => (
             <div key={l.id} className="rounded-md border border-bg-border px-2.5 py-2 text-xs">
               <div className="flex items-center justify-between gap-2">
@@ -250,12 +250,12 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
                     loadLinks();
                   }}
                 >
-                  Синхр.
+                  {tr('Синхр.')}
                 </Button>
               </div>
               <div className={l.status === 'error' ? 'text-red-300' : 'text-text-muted'}>
                 {STATUS[l.status]}
-                {l.watching && ' · отслеживается'}
+                {l.watching && tr(' · отслеживается')}
                 {l.error_message && ` — ${l.error_message}`}
               </div>
             </div>

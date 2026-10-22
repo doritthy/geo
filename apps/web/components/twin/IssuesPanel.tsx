@@ -14,6 +14,7 @@ import {
   type Member,
 } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Icons, Input, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 function StatusBadge({ status }: { status: keyof typeof ISSUE_STATUS }) {
   const s = ISSUE_STATUS[status];
@@ -44,12 +45,12 @@ function Photo({ id, name }: { id: string; name: string }) {
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  created: 'создал(а)',
-  status: 'изменил(а) статус',
-  assigned: 'назначил(а) исполнителя',
-  updated: 'изменил(а) поля',
+  created: tr('создал(а)'),
+  status: tr('изменил(а) статус'),
+  assigned: tr('назначил(а) исполнителя'),
+  updated: tr('изменил(а) поля'),
   comment: '',
-  attachment: 'добавил(а) файл',
+  attachment: tr('добавил(а) файл'),
 };
 
 function IssueCard({ id, members, onChanged, onClose }: { id: string; members: Member[]; onChanged: () => void; onClose: () => void }) {
@@ -60,7 +61,7 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    twinApi.getIssue(id).then(setIssue).catch(() => setError('Предписание не найдено'));
+    twinApi.getIssue(id).then(setIssue).catch(() => setError(tr('Предписание не найдено')));
   }, [id]);
 
   async function act(fn: () => Promise<IssueDetail>) {
@@ -70,25 +71,25 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
       setIssue(await fn());
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Ошибка');
+      setError(err instanceof ApiError ? err.detail : tr('Ошибка'));
     } finally {
       setBusy(false);
     }
   }
 
   if (error && !issue) return <ErrorBox>{error}</ErrorBox>;
-  if (!issue) return <div className="text-xs text-text-muted">Загрузка…</div>;
+  if (!issue) return <div className="text-xs text-text-muted">{tr('Загрузка…')}</div>;
   const images = issue.attachments.filter((a) => (a.content_type ?? '').startsWith('image/'));
   const files = issue.attachments.filter((a) => !(a.content_type ?? '').startsWith('image/'));
 
   return (
     <div className="space-y-3">
-      <button onClick={onClose} className="text-xs text-accent-teal hover:underline">← К реестру</button>
+      <button onClick={onClose} className="text-xs text-accent-teal hover:underline">{tr('← К реестру')}</button>
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted">{issue.kind === 'prescription' ? 'Предписание' : 'Замечание'} №{issue.number}</span>
+          <span className="text-xs text-text-muted">{issue.kind === 'prescription' ? tr('Предписание') : tr('Замечание')} №{issue.number}</span>
           <StatusBadge status={issue.status} />
-          {issue.overdue && <span className="text-[10px] font-semibold text-red-400">просрочено</span>}
+          {issue.overdue && <span className="text-[10px] font-semibold text-red-400">{tr('просрочено')}</span>}
         </div>
         <div className="mt-1 text-base font-semibold">{issue.title}</div>
         {issue.description && <p className="mt-1 whitespace-pre-wrap text-sm text-text-secondary">{issue.description}</p>}
@@ -107,33 +108,33 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Исполнитель">
+        <Field label={tr('Исполнитель')}>
           <Select value={issue.assignee_id ?? ''} onChange={(e) => act(() => twinApi.updateIssue(issue.id, { assignee_id: e.target.value || null }))}>
-            <option value="">— не назначен —</option>
+            <option value="">{tr('— не назначен —')}</option>
             {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </Select>
         </Field>
-        <Field label="Срок">
+        <Field label={tr('Срок')}>
           <Input type="date" value={issue.due_date ?? ''} onChange={(e) => act(() => twinApi.updateIssue(issue.id, { due_date: e.target.value || null }))} />
         </Field>
-        <Field label="Приоритет">
+        <Field label={tr('Приоритет')}>
           <Select value={issue.priority} onChange={(e) => act(() => twinApi.updateIssue(issue.id, { priority: e.target.value }))}>
             {Object.entries(PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
         </Field>
-        <Field label="Тип">
+        <Field label={tr('Тип')}>
           <Select value={issue.kind} onChange={(e) => act(() => twinApi.updateIssue(issue.id, { kind: e.target.value }))}>
-            <option value="remark">Замечание</option>
-            <option value="prescription">Предписание</option>
+            <option value="remark">{tr('Замечание')}</option>
+            <option value="prescription">{tr('Предписание')}</option>
           </Select>
         </Field>
       </div>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wide text-text-secondary">Фото и файлы</span>
+          <span className="text-[11px] uppercase tracking-wide text-text-secondary">{tr('Фото и файлы')}</span>
           <label className="cursor-pointer rounded-md border border-bg-border px-2 py-1 text-xs text-text-secondary hover:text-text-primary">
-            + Фото
+            {tr('+ Фото')}
             <input type="file" accept="image/*" capture="environment" className="hidden"
               onChange={(e) => e.target.files?.[0] && act(() => twinApi.attachToIssue(issue.id, e.target.files![0]))} />
           </label>
@@ -145,11 +146,11 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
             {a.filename}
           </button>
         ))}
-        {issue.attachments.length === 0 && <div className="text-xs text-text-muted">Нет вложений</div>}
+        {issue.attachments.length === 0 && <div className="text-xs text-text-muted">{tr('Нет вложений')}</div>}
       </div>
 
       <div>
-        <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">История</div>
+        <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">{tr('История')}</div>
         <div className="space-y-1.5">
           {issue.events.map((e) => (
             <div key={e.id} className="text-xs">
@@ -174,7 +175,7 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
             if (comment.trim()) act(() => twinApi.commentIssue(issue.id, comment.trim())).then(() => setComment(''));
           }}
         >
-          <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Комментарий…" />
+          <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder={tr('Комментарий…')} />
           <Button type="submit" disabled={!comment.trim() || busy}>OK</Button>
         </form>
       </div>
@@ -202,7 +203,7 @@ function NewIssueForm({ projectId, members, onDone }: { projectId: string; membe
   function useMyLocation() {
     navigator.geolocation?.getCurrentPosition(
       (p) => setGeo({ longitude: p.coords.longitude, latitude: p.coords.latitude }),
-      () => setError('Не удалось получить геопозицию'),
+      () => setError(tr('Не удалось получить геопозицию')),
       { enableHighAccuracy: true, timeout: 15000 }
     );
   }
@@ -222,7 +223,7 @@ function NewIssueForm({ projectId, members, onDone }: { projectId: string; membe
       setPoint(null);
       onDone(issue.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Не удалось создать');
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось создать'));
     } finally {
       setSaving(false);
     }
@@ -232,49 +233,49 @@ function NewIssueForm({ projectId, members, onDone }: { projectId: string; membe
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-accent-teal/40 bg-bg-panel2/50 p-3">
       <div className="flex gap-2">
         <Select value={kind} onChange={(e) => setKind(e.target.value as IssueKind)}>
-          <option value="prescription">Предписание</option>
-          <option value="remark">Замечание</option>
+          <option value="prescription">{tr('Предписание')}</option>
+          <option value="remark">{tr('Замечание')}</option>
         </Select>
         <Select value={priority} onChange={(e) => setPriority(e.target.value as IssuePriority)}>
           {Object.entries(PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>
       </div>
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Суть нарушения" required autoFocus />
-      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Описание, требование, ссылка на норматив"
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr('Суть нарушения')} required autoFocus />
+      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder={tr('Описание, требование, ссылка на норматив')}
         className="w-full rounded-md border border-bg-border bg-bg-panel2 px-2.5 py-1.5 text-sm outline-none focus:border-accent-teal" />
       <div className="grid grid-cols-2 gap-2">
         <Select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-          <option value="">Исполнитель…</option>
+          <option value="">{tr('Исполнитель…')}</option>
           {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </Select>
-        <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} title="Срок устранения" />
+        <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} title={tr('Срок устранения')} />
       </div>
       <div className="space-y-1 text-xs text-text-secondary">
         <div>
           Место:{' '}
           {point ? (
-            <span className="text-accent-teal">точка на модели{point.globalId ? ' · элемент' : ''}</span>
+            <span className="text-accent-teal">точка на модели{point.globalId ? tr(' · элемент') : ''}</span>
           ) : geo ? (
             <span className="text-accent-teal">геопозиция {geo.latitude.toFixed(5)}, {geo.longitude.toFixed(5)}</span>
           ) : (
-            <span>не указано (возьмём из GPS фото, если есть)</span>
+            <span>{tr('не указано (возьмём из GPS фото, если есть)')}</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant={tool === 'issue' ? 'primary' : 'secondary'} onClick={() => setTool(tool === 'issue' ? 'select' : 'issue')}>
-            {tool === 'issue' ? 'Кликните по модели…' : 'Указать на модели'}
+            {tool === 'issue' ? tr('Кликните по модели…') : tr('Указать на модели')}
           </Button>
-          <Button type="button" onClick={useMyLocation}>Моя геопозиция</Button>
+          <Button type="button" onClick={useMyLocation}>{tr('Моя геопозиция')}</Button>
           <label className="cursor-pointer rounded-md border border-bg-border px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary">
-            {photo ? `Фото: ${photo.name}` : 'Сделать фото'}
+            {photo ? `Фото: ${photo.name}` : tr('Сделать фото')}
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           </label>
         </div>
       </div>
       {error && <ErrorBox>{error}</ErrorBox>}
       <div className="flex gap-2">
-        <Button type="submit" variant="primary" disabled={saving || !title.trim()}>{saving ? 'Создание…' : 'Создать'}</Button>
-        <Button type="button" onClick={() => { setPoint(null); onDone(); }}>Отмена</Button>
+        <Button type="submit" variant="primary" disabled={saving || !title.trim()}>{saving ? tr('Создание…') : tr('Создать')}</Button>
+        <Button type="button" onClick={() => { setPoint(null); onDone(); }}>{tr('Отмена')}</Button>
       </div>
     </form>
   );
@@ -320,27 +321,27 @@ export default function IssuesPanel({ projectId }: { projectId: string }) {
       {creating ? (
         <NewIssueForm projectId={projectId} members={members} onDone={(id) => { setCreating(false); load(); if (id) setOpenId(id); }} />
       ) : (
-        <Button variant="primary" onClick={() => setCreating(true)}>+ Новое предписание</Button>
+        <Button variant="primary" onClick={() => setCreating(true)}>{tr('+ Новое предписание')}</Button>
       )}
       <div className="flex flex-wrap gap-2">
         <Select value={status} onChange={(e) => setStatus(e.target.value)} className="flex-1">
-          <option value="open,in_progress,review">Активные</option>
-          <option value="open">Открытые</option>
-          <option value="in_progress">В работе</option>
-          <option value="review">На проверке</option>
-          <option value="closed">Закрытые</option>
-          <option value="">Все</option>
+          <option value="open,in_progress,review">{tr('Активные')}</option>
+          <option value="open">{tr('Открытые')}</option>
+          <option value="in_progress">{tr('В работе')}</option>
+          <option value="review">{tr('На проверке')}</option>
+          <option value="closed">{tr('Закрытые')}</option>
+          <option value="">{tr('Все')}</option>
         </Select>
         <Select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="flex-1">
-          <option value="">Все исполнители</option>
-          <option value="me">Мои</option>
+          <option value="">{tr('Все исполнители')}</option>
+          <option value="me">{tr('Мои')}</option>
           {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск или №" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Поиск или №')} />
         <label className="flex shrink-0 items-center gap-1 text-xs text-text-secondary">
-          <input type="checkbox" checked={overdue} onChange={(e) => setOverdue(e.target.checked)} /> Просрочены
+          <input type="checkbox" checked={overdue} onChange={(e) => setOverdue(e.target.checked)} /> {tr('Просрочены')}
         </label>
       </div>
       <div className="flex items-center justify-between text-[11px] text-text-muted">
@@ -353,7 +354,7 @@ export default function IssuesPanel({ projectId }: { projectId: string }) {
         </span>
       </div>
       {issues.length === 0 ? (
-        <Empty>Нет предписаний по выбранным условиям.</Empty>
+        <Empty>{tr('Нет предписаний по выбранным условиям.')}</Empty>
       ) : (
         <div className="space-y-1">
           {issues.map((i) => (
@@ -369,9 +370,9 @@ export default function IssuesPanel({ projectId }: { projectId: string }) {
               </div>
               <div className="mt-0.5 truncate text-sm">{i.title}</div>
               <div className="text-[11px] text-text-muted">
-                {i.assignee_name ?? 'не назначен'}
+                {i.assignee_name ?? tr('не назначен')}
                 {i.due_date && ` · до ${new Date(i.due_date).toLocaleDateString('ru-RU')}`}
-                {i.overdue && <span className="text-red-400"> · просрочено</span>}
+                {i.overdue && <span className="text-red-400"> {tr('· просрочено')}</span>}
               </div>
             </button>
           ))}

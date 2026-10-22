@@ -6,12 +6,13 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import type { BimElementSummary } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 const GROUPS: { key: 'added' | 'removed' | 'modified_geometry' | 'modified_properties'; label: string; color: string }[] = [
-  { key: 'added', label: 'Добавлено', color: '#22C55E' },
-  { key: 'removed', label: 'Удалено', color: '#EF4444' },
-  { key: 'modified_geometry', label: 'Изменена геометрия', color: '#F97316' },
-  { key: 'modified_properties', label: 'Изменены свойства', color: '#EAB308' },
+  { key: 'added', label: tr('Добавлено'), color: '#22C55E' },
+  { key: 'removed', label: tr('Удалено'), color: '#EF4444' },
+  { key: 'modified_geometry', label: tr('Изменена геометрия'), color: '#F97316' },
+  { key: 'modified_properties', label: tr('Изменены свойства'), color: '#EAB308' },
 ];
 
 /** Version comparison of two BIM models by IFC GlobalId, coloured in 3D. */
@@ -54,7 +55,7 @@ export default function ComparePanel() {
         otherName: bim.find((a) => a.id === otherId)?.name ?? '',
       });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Сравнение не удалось');
+      setError(err instanceof ApiError ? err.detail : tr('Сравнение не удалось'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ export default function ComparePanel() {
   }
 
   if (bim.length < 2) {
-    return <Empty>Для сравнения загрузите вторую версию BIM-модели (при загрузке выберите «Новая версия модели»).</Empty>;
+    return <Empty>{tr('Для сравнения загрузите вторую версию BIM-модели (при загрузке выберите «Новая версия модели»).')}</Empty>;
   }
 
   const label = (id: string) => {
@@ -78,21 +79,21 @@ export default function ComparePanel() {
 
   return (
     <div className="space-y-3">
-      <Field label="Базовая версия">
+      <Field label={tr('Базовая версия')}>
         <Select value={baseId} onChange={(e) => setBaseId(e.target.value)}>
           {bim.map((a) => <option key={a.id} value={a.id}>{label(a.id)}</option>)}
         </Select>
       </Field>
-      <Field label="Сравнить с">
+      <Field label={tr('Сравнить с')}>
         <Select value={otherId} onChange={(e) => setOtherId(e.target.value)}>
           {bim.map((a) => <option key={a.id} value={a.id}>{label(a.id)}</option>)}
         </Select>
       </Field>
       <div className="flex gap-2">
         <Button variant="primary" onClick={run} disabled={loading || !baseId || !otherId || baseId === otherId}>
-          {loading ? 'Сравнение…' : 'Сравнить'}
+          {loading ? tr('Сравнение…') : tr('Сравнить')}
         </Button>
-        {compare && <Button onClick={() => setCompare(null)}>Сбросить</Button>}
+        {compare && <Button onClick={() => setCompare(null)}>{tr('Сбросить')}</Button>}
       </div>
       {error && <ErrorBox>{error}</ErrorBox>}
 
@@ -100,7 +101,7 @@ export default function ComparePanel() {
         <div className="space-y-2">
           <div className="text-xs text-text-muted">
             Без изменений: {compare.counts.unchanged}
-            {compare.truncated && ' · списки усечены'}
+            {compare.truncated && tr(' · списки усечены')}
           </div>
           {GROUPS.map((g) => (
             <div key={g.key} className="rounded-md border border-bg-border">
@@ -117,7 +118,7 @@ export default function ComparePanel() {
                       onClick={() => open(item, g.key === 'removed')}
                       className="block w-full px-2.5 py-1 text-left text-xs hover:bg-bg-panel2"
                     >
-                      {item.name || '(без имени)'} <span className="text-text-muted">· {item.ifc_type.replace(/^Ifc/, '')}</span>
+                      {item.name || tr('(без имени)')} <span className="text-text-muted">· {item.ifc_type.replace(/^Ifc/, '')}</span>
                     </button>
                   ))}
                 </div>

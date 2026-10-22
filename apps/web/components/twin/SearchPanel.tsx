@@ -5,6 +5,7 @@ import { useTwinStore } from '@/lib/twin/store';
 import { twinApi } from '@/lib/twin/api';
 import type { BimElementSummary } from '@/lib/twin/types';
 import { Button, Empty, Field, Input, Select } from './ui';
+import { tr } from '@/lib/i18n';
 
 /** Element search over the BIM index: by name / GlobalId / class / storey.
  * Results can be highlighted in 3D; clicking one selects and flies to it. */
@@ -51,11 +52,11 @@ export default function SearchPanel() {
     if (detail.bbox) requestFlyTo({ assetId, bbox: detail.bbox });
   }
 
-  if (bimAssets.length === 0) return <Empty>Поиск доступен после загрузки BIM-модели.</Empty>;
+  if (bimAssets.length === 0) return <Empty>{tr('Поиск доступен после загрузки BIM-модели.')}</Empty>;
 
   return (
     <div className="space-y-3">
-      <Field label="Модель">
+      <Field label={tr('Модель')}>
         <Select value={assetId} onChange={(e) => setAssetId(e.target.value)}>
           {bimAssets.map((a) => (
             <option key={a.id} value={a.id}>
@@ -64,27 +65,27 @@ export default function SearchPanel() {
           ))}
         </Select>
       </Field>
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Название, GlobalId, класс…" />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Название, GlobalId, класс…')} />
       <div className="grid grid-cols-2 gap-2">
         <Select value={ifcType} onChange={(e) => setIfcType(e.target.value)}>
-          <option value="">Все классы</option>
+          <option value="">{tr('Все классы')}</option>
           {Object.keys(asset?.stats.ifc_types ?? {}).map((t) => (
             <option key={t} value={t}>{t.replace(/^Ifc/, '')}</option>
           ))}
         </Select>
         <Select value={storey} onChange={(e) => setStorey(e.target.value)}>
-          <option value="">Все этажи</option>
+          <option value="">{tr('Все этажи')}</option>
           {Object.keys(asset?.stats.storeys ?? {}).map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </Select>
       </div>
       <div className="flex items-center justify-between text-xs text-text-muted">
-        <span>{loading ? 'Поиск…' : `Найдено: ${total}${total > items.length ? ` (показано ${items.length})` : ''}`}</span>
+        <span>{loading ? tr('Поиск…') : `Найдено: ${total}${total > items.length ? ` (показано ${items.length})` : ''}`}</span>
         {highlight ? (
-          <Button variant="ghost" onClick={() => setHighlight(null)}>Снять подсветку</Button>
+          <Button variant="ghost" onClick={() => setHighlight(null)}>{tr('Снять подсветку')}</Button>
         ) : (
-          <Button variant="ghost" onClick={() => setHighlight(items)} disabled={!items.length}>Подсветить</Button>
+          <Button variant="ghost" onClick={() => setHighlight(items)} disabled={!items.length}>{tr('Подсветить')}</Button>
         )}
       </div>
       <div className="space-y-1">
@@ -94,7 +95,7 @@ export default function SearchPanel() {
             onClick={() => open(item)}
             className="block w-full rounded-md border border-bg-border px-2.5 py-1.5 text-left hover:border-accent-teal/60"
           >
-            <div className="truncate text-sm">{item.name || '(без имени)'}</div>
+            <div className="truncate text-sm">{item.name || tr('(без имени)')}</div>
             <div className="flex gap-2 text-[11px] text-text-muted">
               <span>{item.ifc_type.replace(/^Ifc/, '')}</span>
               {item.storey && <span>{item.storey}</span>}
