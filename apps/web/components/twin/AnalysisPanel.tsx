@@ -88,6 +88,7 @@ function DeviationResult({ a, onChanged }: { a: Analysis; onChanged: () => void 
           </div>
         </>
       )}
+      <ExecutiveScheme analysisId={a.id} storeys={Object.keys((assets.find((x) => x.id === a.params.bim_asset_id)?.stats.storeys ?? {}) as Record<string, number>)} />
       <div className="flex flex-wrap gap-2">
         {a.result_asset_id && assets.some((x) => x.id === a.result_asset_id) && (
           <Button variant={mapShown ? 'primary' : 'secondary'} onClick={() => showMap(!mapShown)}>
@@ -98,6 +99,12 @@ function DeviationResult({ a, onChanged }: { a: Analysis; onChanged: () => void 
           {coloured ? tr('Обычные цвета модели') : tr('Раскрасить модель')}
         </Button>
         <Button onClick={() => twinApi.downloadReport(a.id)}>{tr('PDF-отчёт')}</Button>
+        <Button
+          title={tr('Исходный IFC с набором свойств Twin_AsBuilt по каждому элементу')}
+          onClick={() => twinApi.downloadAnalysisFile(a.id, 'as-built.ifc', 'as-built.ifc').catch((e) => alert(e.detail ?? e))}
+        >
+          As-built IFC
+        </Button>
         <Button
           variant="danger"
           onClick={async () => {
@@ -286,5 +293,48 @@ export default function AnalysisPanel({ projectId, onAssetsChanged }: { projectI
         ))}
       </div>
     </div>
+  );
+}
+
+
+/** Исполнительная схема отметок верха плит (PDF) from this analysis. */
+function ExecutiveScheme({ analysisId, storeys }: { analysisId: string; storeys: string[] }) {
+  const [storey, setStorey] = useState('');
+  const [step, setStep] = useState('3');
+  const [tol, setTol] = useState('10');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      await twinApi.downloadAnalysisFile(analysisId, 'executive-scheme.pdf', tr('Исполнительная_схема.pdf'), {
+        storey: storey || undefined, step: Number(step.replace(',', '.')) || 3, tolerance_mm: Number(tol.replace(',', '.')) || 10,
+      });
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : tr('Не удалось сформировать файл'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <details className="rounded-md border border-bg-border px-2.5 py-2 text-xs">
+      <summary className="cursor-pointer text-text-secondary">{tr('Исполнительная схема отметок плит')}</summary>
+      <div className="mt-2 space-y-2">
+        <Field label={tr('Этаж')}>
+            <Select value={storey} onChange={(e) => setStorey(e.target.value)}>
+              <option value="">{tr('Все плиты')}</option>
+              {storeys.map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label={tr('Шаг сетки, м')}><Input value={step} onChange={(e) => setStep(e.target.value)} inputMode="decimal" /></Field>
+          <Field label={tr('Допуск, мм')}><Input value={tol} onChange={(e) => setTol(e.target.value)} inputMode="decimal" /></Field>
+        </div>
+        <p className="text-[11px] text-text-muted">{tr('Контрольные точки по верху плит: проектная отметка из модели, фактическая — по скану, координаты в СК проекта.')}</p>
+        {error && <ErrorBox>{error}</ErrorBox>}
+        <Button onClick={run} disabled={busy}>{busy ? tr('Расчёт…') : tr('Сформировать PDF')}</Button>
+      </div>
+    </details>
   );
 }

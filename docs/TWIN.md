@@ -71,6 +71,9 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 - 4D: импорт графика (MS Project XML, Excel, CSV), привязка задач к элементам, план/факт, SPI, прогноз,
   раскраска модели на отчётную дату, факт по данным сканирования.
 - Дашборд проекта (`/twin/{id}/dashboard`): прогресс, SPI, прогноз, качество, предписания, датчики.
+- As-built: выгрузка исходного IFC с набором свойств `Twin_AsBuilt` (статус «соответствует / отклонение /
+  мало точек / не отсканировано», среднее/95%/макс отклонение, число точек) и исполнительная схема отметок
+  верха плит (PDF: план с точками, проект/факт/Δ, координаты в СК проекта, отметки в системе высот модели).
 - Портфель (`/portfolio`): сравнение всех проектов пользователя — выполнение, SPI, прогноз, предписания, качество, датчики.
 - Профиль-разрез вдоль линии: линии сечения BIM и точки скана на графике.
 - Синхронизация предписаний с ACC Issues; PWA (установка на телефон, кэш статики).
@@ -128,6 +131,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | GET | `/api/crs/resolve`, `/api/crs/presets` | Системы координат |
 | POST | `/api/projects/{id}/analyses/deviation`, `/analyses/alignment` | Карта отклонений, ICP |
 | GET | `/api/analyses/{id}`, `/api/analyses/{id}/report.pdf` | Результат анализа, PDF |
+| GET | `/api/analyses/{id}/as-built.ifc`, `/executive-scheme.pdf?storey=&step=&tolerance_mm=` | As-built IFC, исполнительная схема отметок |
 | GET/POST/PATCH | `/api/projects/{id}/issues`, `/api/issues/{id}` (+ `/comments`, `/attachments`) | Предписания |
 | GET | `/api/projects/{id}/issues/export.xlsx` / `.pdf` | Реестр предписаний |
 | POST/GET | `/api/projects/{id}/schedule/import`, `/schedule`, `/schedule/element-status` | 4D-график |

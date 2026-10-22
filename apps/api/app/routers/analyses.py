@@ -182,3 +182,102 @@ def profile(payload: ProfileRequest, project: Project = Depends(project_viewer),
         out["scan"] = corridor_points((pts - origin) @ axes.T, a2, b2, payload.width)
     return out
 
+
+@router.get("/api/analyses/{analysis_id}/as-built.ifc")
+def as_built_ifc(analysis_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Source IFC of the analysed model + per-element as-built property set."""
+    import os
+    import tempfile
+
+    from app.models import FileRecord
+    from app.storage import download_to_file
+    from app.twin.asbuilt import build_as_built
+
+    a: Analysis = get_project_scoped_or_404(Analysis, analysis_id, db, user)
+    if a.kind != "deviation" or a.status != "ready":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нужен готовый анализ отклонений")
+    bim = db.get(SceneAsset, uuid.UUID(a.params["bim_asset_id"]))
+    src = db.get(FileRecord, bim.source_file_id) if bim and bim.source_file_id else None
+    if src is None or not src.filename.lower().endswith(".ifc"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Исходный IFC модели недоступен (например, модель получена из RVT через APS)")
+    fd, path = tempfile.mkstemp(suffix=".ifc")
+    os.close(fd)
+    try:
+        download_to_file(src.storage_key, path)
+        data, _ = build_as_built(path, a.result, a.created_at.date().isoformat())
+    finally:
+        os.unlink(path)
+    name = f"{os.path.splitext(src.filename)[0]}_as-built_{a.created_at:%Y-%m-%d}.ifc"
+    return Response(data, media_type="application/x-step",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
+
+
+@router.get("/api/analyses/{analysis_id}/executive-scheme.pdf")
+def executive_scheme(
+    analysis_id: uuid.UUID,
+    storey: str | None = None,
+    step: float = 3.0,
+    tolerance_mm: float = 10.0,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Исполнительная схема отметок верха плит: control-point grid (`step`
+    metres) on each slab of `storey` (all slabs if omitted), design vs
+    as-built elevation from the analysed scan."""
+    from pyproj import Transformer
+
+    from app.models import BimElement
+    from app.twin import exec_scheme
+    from app.twin import georef as geo
+    from app.twin.analysis_jobs import load_mesh_world, load_points_world, local_frame, to_local
+
+    a: Analysis = get_project_scoped_or_404(Analysis, analysis_id, db, user)
+    if a.kind != "deviation" or a.status != "ready":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нужен готовый анализ отклонений")
+    step = min(max(step, 0.5), 20.0)
+    tolerance_mm = min(max(tolerance_mm, 1.0), 200.0)
+    project = db.get(Project, a.project_id)
+    bim = db.get(SceneAsset, uuid.UUID(a.params["bim_asset_id"]))
+    cloud = db.get(SceneAsset, uuid.UUID(a.params["cloud_asset_id"]))
+    if bim is None or cloud is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Модель или скан удалены")
+
+    storeys = {e.global_id: e.storey for e in db.query(BimElement.global_id, BimElement.storey)
+               .filter(BimElement.asset_id == bim.id, BimElement.ifc_type == "IfcSlab").all()}
+    mesh, tris_w = load_mesh_world(bim)
+    pts_w, _, _ = load_points_world(cloud)
+    origin, axes = local_frame(pts_w)
+    tris = to_local(tris_w.reshape(-1, 3), origin, axes).reshape(-1, 3, 3)
+    pts = to_local(pts_w, origin, axes)
+    slabs = [(i, gid, mesh.names[i] or gid, storeys.get(gid)) for i, gid in enumerate(mesh.global_ids)
+             if mesh.ifc_types[i] == "IfcSlab" and (storey is None or storeys.get(gid) == storey)]
+    schemes = exec_scheme.compute(tris, mesh.feature, slabs, pts, step)
+    schemes.sort(key=lambda s: (s.storey or "", s.name))
+
+    height_offset = float(bim.georef.get("height_offset") or 0.0) if bim.georef.get("mode") == "absolute" else 0.0
+    to_crs, crs_label = None, "(широта / долгота)"
+    try:
+        crs = geo.resolve_crs(project.crs) if project.crs else None
+        if crs is not None and crs.is_projected:
+            to_crs, crs_label = Transformer.from_crs(4326, crs, always_xy=True), f"({project.crs})"
+    except geo.GeorefError:
+        pass
+
+    def llh(local):
+        return geo.ecef_to_llh(origin + np.asarray(local) @ axes)[0]
+
+    def to_coords(local):
+        lon, lat, _ = llh(local)
+        return to_crs.transform(lon, lat) if to_crs else (lat, lon)
+
+    def to_height(local):
+        return float(llh(local)[2]) - height_offset
+
+    r = a.result
+    pdf = exec_scheme.build_pdf(project.name, f"{r['bim']['name']} v{r['bim']['version']}",
+                                f"{r['cloud']['name']} {r['cloud'].get('captured_at') or ''}".strip(),
+                                schemes, tolerance_mm, to_coords, to_height, crs_label)
+    name = f"Исполнительная_схема_{storey or 'все_плиты'}_{a.created_at:%Y-%m-%d}.pdf"
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})

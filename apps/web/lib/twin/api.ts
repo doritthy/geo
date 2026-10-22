@@ -166,6 +166,21 @@ export const twinApi = {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 
+  /** Downloads an analysis export (as-built IFC, executive scheme PDF…). */
+  async downloadAnalysisFile(id: string, path: string, filename: string, params: Record<string, string | number | undefined> = {}) {
+    const res = await fetch(absoluteUrl(`/api/analyses/${id}/${path}${qs(params)}`), { headers: authHeaders() });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new ApiError(res.status, body?.detail ?? tr('Не удалось сформировать файл'));
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
   members: (projectId: string) => request<Member[]>(`/api/projects/${projectId}/members`),
   listIssues: (projectId: string, p: { status?: string; assignee?: string; kind?: string; overdue?: boolean; q?: string } = {}) =>
     request<Issue[]>(`/api/projects/${projectId}/issues${qs({ ...p, overdue: p.overdue ? 'true' : undefined })}`),
