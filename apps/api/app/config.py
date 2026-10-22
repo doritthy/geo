@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     APS_BASE_URL: str = "https://developer.api.autodesk.com"
     PUBLIC_WEB_URL: str = "http://localhost:3000"
 
+    # Email notifications (optional). Without SMTP_HOST they are only logged.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "twin@localhost"
+    SMTP_TLS: bool = True
+
     @property
     def aps_configured(self) -> bool:
         return bool(self.APS_CLIENT_ID and self.APS_CLIENT_SECRET)

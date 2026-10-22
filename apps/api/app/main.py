@@ -15,7 +15,9 @@ from app.routers import (
     files,
     formations,
     grids,
+    issues,
     maps,
+    organization,
     projects,
     surfaces,
     wells,
@@ -62,6 +64,8 @@ app.include_router(documents.router)
 app.include_router(crs.router)
 app.include_router(autodesk.router)
 app.include_router(analyses.router)
+app.include_router(issues.router)
+app.include_router(organization.router)
 
 
 @app.get("/health")

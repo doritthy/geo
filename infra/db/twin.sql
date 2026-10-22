@@ -148,3 +148,53 @@ CREATE TABLE IF NOT EXISTS analyses (
   finished_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_analyses_project ON analyses(project_id);
+
+-- Замечания и предписания (issue tracking) with photo evidence and history.
+CREATE TABLE IF NOT EXISTS issues (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  number INTEGER NOT NULL,                       -- sequential per project
+  kind TEXT NOT NULL DEFAULT 'remark',           -- remark (замечание) | prescription (предписание)
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'open',           -- open | in_progress | review | closed
+  priority TEXT NOT NULL DEFAULT 'normal',       -- low | normal | high | critical
+  assignee_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  due_date DATE,
+  longitude DOUBLE PRECISION,
+  latitude DOUBLE PRECISION,
+  height DOUBLE PRECISION,
+  asset_id UUID REFERENCES scene_assets(id) ON DELETE SET NULL,
+  element_global_id TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closed_at TIMESTAMPTZ,
+  UNIQUE (project_id, number)
+);
+CREATE INDEX IF NOT EXISTS idx_issues_project ON issues(project_id, status);
+
+CREATE TABLE IF NOT EXISTS issue_attachments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  storage_key TEXT NOT NULL,
+  content_type TEXT,
+  size_bytes BIGINT NOT NULL,
+  longitude DOUBLE PRECISION,                    -- from photo EXIF GPS, if present
+  latitude DOUBLE PRECISION,
+  taken_at TIMESTAMPTZ,
+  uploaded_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- History: creation, status / assignee / field changes, comments, photos.
+CREATE TABLE IF NOT EXISTS issue_events (
+  id BIGSERIAL PRIMARY KEY,
+  issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  kind TEXT NOT NULL,                            -- created | status | assigned | updated | comment | attachment
+  data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_issue_events_issue ON issue_events(issue_id);
