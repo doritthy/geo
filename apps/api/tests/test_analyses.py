@@ -67,6 +67,7 @@ def test_icp_alignment_recovers_offset(client, scene):
     t = a["result"]["translation_enu"]
     assert t[0] == pytest.approx(-0.2, abs=0.02) and t[1] == pytest.approx(0.12, abs=0.02) and t[2] == pytest.approx(-0.05, abs=0.02)
     assert a["result"]["rmse_after"] < a["result"]["rmse_before"]
+    assert a["result"]["warnings"] == []
     g = client.get(f"/api/assets/{scan}", headers=h).json()["georef"]
     assert len(g["alignment"]) == 16
     g = client.patch(f"/api/assets/{scan}", headers=h, json={"reset_alignment": True}).json()["georef"]

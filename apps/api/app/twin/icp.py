@@ -163,7 +163,21 @@ def run_alignment(db: Session, analysis: Analysis) -> None:
         old = np.asarray(cloud.georef.get("alignment") or np.eye(4).T.reshape(-1).tolist(), dtype=np.float64).reshape(4, 4).T
         new = delta @ old
         cloud.georef = {**cloud.georef, "alignment": new.T.reshape(-1).tolist(), "alignment_source": "icp"}
+    # The search is horizontal-only and picks the smallest correction among
+    # near-ties, so some outcomes deserve a human look before trusting them.
+    warnings = []
+    dz = float(res["translation"][2])
+    if abs(dz) > 0.08:
+        warnings.append(f"Вертикальная поправка {dz * 100:+.0f} см сравнима с толщиной плиты — проверьте высоты скана "
+                        "и при необходимости задайте смещение по высоте вручную.")
+    if res["rmse_after"] > 0.03:
+        warnings.append(f"Остаточная невязка {res['rmse_after'] * 1000:.0f} мм — подгонка неуверенная: скан мог "
+                        "покрывать другую часть объекта, или модель отличается от факта.")
+    if math.hypot(res["translation"][0], res["translation"][1]) > 0.35:
+        warnings.append("Горизонтальный сдвиг близок к границе поиска (0,4 м) — исходная привязка, вероятно, "
+                        "грубая; уточните её вручную и повторите подгонку.")
     analysis.result = {
+        "warnings": warnings,
         "rmse_before": res["rmse_before"], "rmse_after": res["rmse_after"],
         "yaw_deg": res["yaw_deg"], "translation_enu": res["translation"],
         "inliers": res["inliers"], "iterations": res["iterations"], "applied": applied,

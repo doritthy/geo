@@ -271,9 +271,12 @@ export default function AnalysisPanel({ projectId, onAssetsChanged }: { projectI
                 {a.status === 'ready' && a.kind === 'deviation' && <DeviationResult a={a} onChanged={() => { load(); onAssetsChanged(); }} />}
                 {a.status === 'ready' && a.kind === 'alignment' && (
                   <div className="space-y-1 text-xs">
-                    <div>Смещение (В/С/Высота): {a.result.translation_enu?.map((v) => `${(v * 100).toFixed(1)} см`).join(' / ')}</div>
-                    <div>Поворот: {a.result.yaw_deg?.toFixed(3)}°</div>
-                    <div>Невязка до / после: {mm(a.result.rmse_before)} / {mm(a.result.rmse_after)}</div>
+                    {(a.result.warnings ?? []).map((w) => (
+                      <div key={w} className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-200">⚠ {w}</div>
+                    ))}
+                    <div>{tr('Смещение (В/С/Высота)')}: {a.result.translation_enu?.map((v) => `${(v * 100).toFixed(1)} см`).join(' / ')}</div>
+                    <div>{tr('Поворот')}: {a.result.yaw_deg?.toFixed(3)}°</div>
+                    <div>{tr('Невязка до / после')}: {mm(a.result.rmse_before)} / {mm(a.result.rmse_after)}</div>
                     <div className="text-text-muted">{tr('Подгонка применена к скану. Пересчитайте карту отклонений.')}</div>
                   </div>
                 )}

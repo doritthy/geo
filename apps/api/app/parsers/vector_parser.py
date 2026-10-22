@@ -9,7 +9,9 @@ like longitude/latitude.
 import json
 import os
 import tempfile
+import threading
 import zipfile
+from contextlib import contextmanager, nullcontext
 
 import geopandas
 import numpy as np
@@ -18,6 +20,27 @@ from app.parsers.shapefile_parser import ParsedVectorLayer
 from app.twin.georef import resolve_crs
 
 VECTOR_FORMATS = ("geojson", "kml", "kmz", "dxf", "gpkg")
+
+# GDAL reads DXF_ENCODING from the process environment, so concurrent DXF
+# imports (worker threads, inline jobs) must not interleave set/read/restore.
+_DXF_LOCK = threading.Lock()
+
+
+@contextmanager
+def _dxf_encoding_env(encoding: str | None):
+    with _DXF_LOCK:
+        prev = os.environ.get("DXF_ENCODING")
+        if encoding:
+            os.environ["DXF_ENCODING"] = encoding
+        else:
+            os.environ.pop("DXF_ENCODING", None)
+        try:
+            yield
+        finally:
+            if prev is None:
+                os.environ.pop("DXF_ENCODING", None)
+            else:
+                os.environ["DXF_ENCODING"] = prev
 
 
 def _read_all_layers(path: str, fmt: str) -> geopandas.GeoDataFrame:
@@ -61,13 +84,8 @@ def parse_vector(raw: bytes, filename: str, fmt: str, crs_hint: str | int | None
 
 
 def _parse_vector(raw: bytes, fmt: str, crs_hint: str | int | None) -> ParsedVectorLayer:
-    if fmt == "dxf":
-        encoding = _dxf_encoding(raw)
-        if encoding:
-            os.environ["DXF_ENCODING"] = encoding
-        else:
-            os.environ.pop("DXF_ENCODING", None)
-    with tempfile.TemporaryDirectory() as tmpdir:
+    env = _dxf_encoding_env(_dxf_encoding(raw)) if fmt == "dxf" else nullcontext()
+    with env, tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, f"upload.{fmt}")
         with open(path, "wb") as fh:
             fh.write(raw)

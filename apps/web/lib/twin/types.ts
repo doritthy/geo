@@ -240,6 +240,7 @@ export interface Analysis {
     yaw_deg?: number;
     translation_enu?: number[];
     match_ratio?: number;
+    warnings?: string[];
     cloud?: { id: string; name: string };
     bim?: { id: string; name: string; version: number };
   };
