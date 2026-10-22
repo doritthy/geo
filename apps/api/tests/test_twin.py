@@ -449,3 +449,53 @@ def test_conversion_progress_reporting(client, monkeypatch):
         meta = conn.execute(text("SELECT metadata FROM files WHERE id = :id"), {"id": file_id}).scalar()
     assert meta["progress"] == {"stage": "Тест", "fraction": 0.5}
     progress.report("вне задачи")  # no tracked file: a no-op
+
+
+def test_large_mesh_builds_lod_tree(client, monkeypatch):
+    import io
+
+    import trimesh
+    from PIL import Image
+
+    from app.twin import mesh_convert
+    from tests.twin_fixtures import make_textured_terrain_glb
+
+    # Scale thresholds down so a small fixture exercises the quadtree.
+    monkeypatch.setattr(mesh_convert, "SINGLE_TILE_FACES", 2000)
+    monkeypatch.setattr(mesh_convert, "LEAF_FACES", 1500)
+    monkeypatch.setattr(mesh_convert, "PARENT_FACES", 800)
+    h = _headers(client)
+    pid = _project(client, h)
+    asset_id = _upload(client, h, pid, "terrain.glb", make_textured_terrain_glb(), "reality_mesh",
+                       {"georef_mode": "anchor", "longitude": 71.4, "latitude": 51.1, "height": 350})
+    asset = client.get(f"/api/assets/{asset_id}", headers=h).json()
+    assert asset["stats"]["tile_count"] > 4 and asset["stats"]["textured"] is True
+    ts = _tileset(client, h, asset)
+
+    def walk(node, depth=0):
+        yield node, depth
+        for c in node.get("children", []):
+            yield from walk(c, depth + 1)
+
+    nodes = list(walk(ts["root"]))
+    leaves = [n for n, _ in nodes if not n.get("children")]
+    inner = [n for n, _ in nodes if n.get("children") and "content" in n]
+    assert len(leaves) >= 4 and inner
+    # Parents are coarse stand-ins: children must replace, not overlay, them.
+    assert all(n["refine"] == "REPLACE" for n, _ in nodes)
+    # Errors shrink towards the leaves.
+    for n, _ in nodes:
+        for c in n.get("children", []):
+            assert c["geometricError"] <= n["geometricError"]
+
+    def glb_of(node):
+        data = client.get(f"/api/assets/{asset_id}/tiles/{node['content']['uri']}", headers=h).content
+        ft_json, ft_bin, bt_json, bt_bin = struct.unpack_from("<4I", data, 12)
+        return trimesh.load(io.BytesIO(data[28 + ft_json + ft_bin + bt_json + bt_bin:]), file_type="glb", force="mesh")
+
+    leaf = glb_of(leaves[0])
+    assert leaf.visual.kind == "texture"
+    img = getattr(leaf.visual.material, "image", None) or leaf.visual.material.baseColorTexture
+    assert max(img.size) < 512  # cropped to the leaf's part of the atlas
+    parent = glb_of(inner[0])
+    assert parent.visual.kind == "vertex" and len(parent.faces) <= 1000

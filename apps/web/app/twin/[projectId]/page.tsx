@@ -114,7 +114,12 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
     const hs: number[] = [];
     for (const a of assets) {
       const st = a.stats as Record<string, any>;
-      if (a.georef.mode === 'anchor') hs.push(a.georef.height);
+      if (a.georef.mode === 'anchor') {
+        // Bottom of the model: anchor height + its lowest local z (meshes may dip below the anchor).
+        const lo = st.bounds_source?.min?.[2];
+        const origin = (a.georef as { local_origin?: number[] }).local_origin?.[2] ?? 0;
+        hs.push(a.georef.height + (typeof lo === 'number' ? Math.min(0, (lo - origin) * (a.georef.scale ?? 1)) : 0));
+      }
       else if (a.kind === 'point_cloud' && st.bounds_source) hs.push(st.bounds_source.min[2] + (a.georef.height_offset ?? 0));
       else if (st.center && st.bounds_model) hs.push(st.center.height - (st.bounds_model.max[2] - st.bounds_model.min[2]) / 2);
       else if (st.center) hs.push(st.center.height);

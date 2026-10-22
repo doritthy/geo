@@ -240,17 +240,21 @@ class TileNode:
     children: list["TileNode"] = field(default_factory=list)
 
 
-def tileset_json(root: TileNode, root_transform: list[float] | None = None) -> dict:
+def tileset_json(root: TileNode, root_transform: list[float] | None = None, refine: str = "ADD") -> dict:
     """Serialize a TileNode tree. Each node with an `origin` gets a translation
     transform (relative to its nearest transformed ancestor), and its box is
-    expressed in that local frame, per the 3D Tiles transform rules."""
+    expressed in that local frame, per the 3D Tiles transform rules.
+
+    `refine`: ADD when children add detail to the parent (point octree, BIM
+    partitions without parent content); REPLACE when a parent is a coarser
+    stand-in for its children (mesh LOD)."""
 
     def emit(node: TileNode, parent_origin: np.ndarray) -> dict:
         origin = node.origin if node.origin is not None else parent_origin
         out: dict = {
             "boundingVolume": {"box": box_relative_to(node.box, origin)},
             "geometricError": float(node.geometric_error),
-            "refine": "ADD",
+            "refine": refine,
         }
         if node.origin is not None and not np.allclose(origin, parent_origin):
             out["transform"] = translation_matrix(origin - parent_origin)

@@ -95,3 +95,27 @@ def make_obj() -> bytes:
     box = trimesh.creation.box((10, 6, 3))
     box.apply_translation((0, 0, 1.5))
     return trimesh.exchange.obj.export_obj(box).encode()
+
+
+def make_textured_terrain_glb(n: int = 60, size: float = 120.0) -> bytes:
+    """Photogrammetry-like textured surface: n×n grid (2n² faces), one atlas
+    image with a red-to-blue gradient across, glTF (Y-up)."""
+    import numpy as np
+    import trimesh
+    from PIL import Image
+
+    g = np.linspace(0, 1, n + 1)
+    U, V = np.meshgrid(g, g)
+    x, y = (U - 0.5) * size, (V - 0.5) * size
+    z = 2.0 * np.sin(x / 15) * np.cos(y / 20)
+    verts = np.column_stack([x.ravel(), z.ravel(), -y.ravel()])  # Y-up
+    idx = np.arange((n + 1) ** 2).reshape(n + 1, n + 1)
+    a, b, c, d = idx[:-1, :-1], idx[:-1, 1:], idx[1:, :-1], idx[1:, 1:]
+    faces = np.vstack([np.column_stack([a.ravel(), b.ravel(), d.ravel()]), np.column_stack([a.ravel(), d.ravel(), c.ravel()])])
+    img = np.zeros((512, 512, 3), np.uint8)
+    img[..., 0] = np.linspace(255, 0, 512)[None, :]
+    img[..., 2] = np.linspace(0, 255, 512)[None, :]
+    mat = trimesh.visual.material.SimpleMaterial(image=Image.fromarray(img))
+    uv = np.column_stack([U.ravel(), V.ravel()])
+    mesh = trimesh.Trimesh(verts, faces, visual=trimesh.visual.TextureVisuals(uv=uv, material=mat), process=False)
+    return mesh.export(file_type="glb")
