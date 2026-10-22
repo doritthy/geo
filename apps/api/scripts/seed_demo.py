@@ -1,6 +1,6 @@
 """Fill a running platform with the demo project through the public API:
-two IFC versions, the as-built scan, the site boundary, an annotation and a
-deviation analysis.
+two IFC versions, the as-built scan, the site boundary, an annotation, a
+4D schedule linked to the model and a deviation analysis.
 
     python scripts/make_demo_data.py demo_data
     python scripts/seed_demo.py --api http://localhost:8000 --data demo_data
@@ -63,6 +63,19 @@ def main() -> None:
         "longitude": center["longitude"], "latitude": center["latitude"], "height": center["height"] + 9,
         "title": "Проверить плиту 3-го этажа", "body": "По скану возможен прогиб", "asset_id": v2,
     })
+
+    # 4D: schedule + links (per storey: frame -> columns & slab, walls, glazing)
+    with open(os.path.join(args.data, "demo_schedule.xml"), "rb") as fh:
+        tasks = c.post(f"/api/projects/{pid}/schedule/import", headers=h, files={"file": ("demo_schedule.xml", fh)}).json()["tasks"]
+    classes = {"Каркас": ("IfcColumn", "IfcSlab"), "Наружные стены": ("IfcWall",), "Остекление": ("IfcWindow",)}
+    for t in tasks:
+        if t["is_summary"] or "этаж" not in t["name"]:
+            continue
+        prefix, storey_no = t["name"].split(" — этаж ")
+        for cls in next(v for k, v in classes.items() if prefix.startswith(k)):
+            c.post(f"/api/schedule/tasks/{t['id']}/elements", headers=h,
+                   json={"asset_id": v2, "ifc_type": cls, "storey": f"Этаж {storey_no}"})
+    print(f"schedule: {len(tasks)} tasks")
 
     a = c.post(f"/api/projects/{pid}/analyses/deviation", headers=h,
                json={"cloud_asset_id": scan, "bim_asset_id": v1}).json()

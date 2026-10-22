@@ -12,7 +12,7 @@ export type ToolMode =
   | 'annotate'
   | 'issue';
 
-export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
+export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'schedule' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
 
 export interface Selection {
   kind: 'element' | 'feature' | 'annotation' | 'issue';

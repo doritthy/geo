@@ -526,3 +526,35 @@ class IssueEvent(Base):
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ScheduleTask(Base):
+    __tablename__ = "schedule_tasks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    external_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    wbs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("schedule_tasks.id", ondelete="CASCADE"), nullable=True
+    )
+    is_summary: Mapped[bool] = mapped_column(nullable=False, default=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    finish_date: Mapped[date] = mapped_column(Date, nullable=False)
+    percent_complete: Mapped[float] = mapped_column(Double, nullable=False, default=0.0)
+    cost: Mapped[float | None] = mapped_column(Double, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+
+class ScheduleTaskElement(Base):
+    __tablename__ = "schedule_task_elements"
+
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("schedule_tasks.id", ondelete="CASCADE"), primary_key=True
+    )
+    version_group: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    global_id: Mapped[str] = mapped_column(Text, primary_key=True)

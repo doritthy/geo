@@ -18,6 +18,8 @@ import type {
   Issue,
   IssueDetail,
   Member,
+  ScheduleMetrics,
+  ScheduleTask,
   SceneAsset,
   SceneAssetUpdate,
   TwinProject,
@@ -191,6 +193,26 @@ export const twinApi = {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
+
+  getSchedule: (projectId: string, on?: string) =>
+    request<{ tasks: ScheduleTask[]; metrics: ScheduleMetrics }>(`/api/projects/${projectId}/schedule${qs({ on })}`),
+  importSchedule: (projectId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<{ tasks: ScheduleTask[]; metrics: ScheduleMetrics }>(`/api/projects/${projectId}/schedule/import`, { method: 'POST', body: form });
+  },
+  updateTask: (id: string, body: Record<string, unknown>) =>
+    request<ScheduleTask>(`/api/schedule/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  linkTask: (id: string, body: { asset_id: string; global_ids?: string[]; ifc_type?: string; storey?: string }) =>
+    request<{ linked: number; total: number }>(`/api/schedule/tasks/${id}/elements`, { method: 'POST', body: JSON.stringify(body) }),
+  unlinkTask: (id: string) => request<{ removed: number }>(`/api/schedule/tasks/${id}/elements`, { method: 'DELETE' }),
+  taskElements: (id: string) => request<{ version_group: string; global_id: string }[]>(`/api/schedule/tasks/${id}/elements`),
+  elementStatus: (projectId: string, assetId: string, on: string) =>
+    request<{ on: string; statuses: Record<string, string> }>(`/api/projects/${projectId}/schedule/element-status${qs({ asset_id: assetId, on })}`),
+  progressFromAnalysis: (projectId: string, analysisId: string) =>
+    request<{ tasks: ScheduleTask[]; metrics: ScheduleMetrics }>(`/api/projects/${projectId}/schedule/progress-from-analysis`, {
+      method: 'POST', body: JSON.stringify({ analysis_id: analysisId }),
+    }),
 
   resolveCrs: (value: string) => request<CrsInfo>(`/api/crs/resolve${qs({ value })}`),
   crsPresets: () => request<{ value: string; label: string }[]>('/api/crs/presets'),

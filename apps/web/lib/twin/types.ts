@@ -317,3 +317,43 @@ export const PRIORITY_LABELS: Record<IssuePriority, string> = {
   high: 'Высокий',
   critical: 'Критический',
 };
+
+export type TaskStatus = 'done' | 'in_progress' | 'late' | 'not_started' | 'future';
+
+export interface ScheduleTask {
+  id: string;
+  external_id: string | null;
+  wbs: string | null;
+  name: string;
+  parent_id: string | null;
+  is_summary: boolean;
+  start_date: string;
+  finish_date: string;
+  percent_complete: number;
+  planned_percent: number;
+  cost: number | null;
+  status: TaskStatus;
+  element_count: number;
+}
+
+export interface ScheduleMetrics {
+  status_date: string;
+  weight?: 'cost' | 'duration';
+  planned_percent?: number;
+  actual_percent?: number;
+  spi?: number | null;
+  start?: string;
+  finish?: string;
+  forecast_finish?: string | null;
+  delay_days?: number | null;
+  late_tasks?: number;
+  tasks?: number;
+}
+
+export const TASK_STATUS: Record<TaskStatus, { label: string; color: string }> = {
+  done: { label: 'Выполнено', color: '#22C55E' },
+  in_progress: { label: 'В работе', color: '#FACC15' },
+  late: { label: 'С отставанием', color: '#EF4444' },
+  not_started: { label: 'Не начато', color: '#94A3B8' },
+  future: { label: 'По плану позже', color: 'rgba(148,163,184,0.18)' },
+};

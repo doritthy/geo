@@ -198,3 +198,30 @@ CREATE TABLE IF NOT EXISTS issue_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_issue_events_issue ON issue_events(issue_id);
+
+-- 4D план-факт: work schedule tasks (MS Project XML / Excel import) and
+-- their links to BIM elements of a model version group.
+CREATE TABLE IF NOT EXISTS schedule_tasks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  external_id TEXT,                 -- UID / ID from the source schedule
+  wbs TEXT,
+  name TEXT NOT NULL,
+  parent_id UUID REFERENCES schedule_tasks(id) ON DELETE CASCADE,
+  is_summary BOOLEAN NOT NULL DEFAULT false,
+  start_date DATE NOT NULL,
+  finish_date DATE NOT NULL,
+  percent_complete DOUBLE PRECISION NOT NULL DEFAULT 0,  -- actual progress 0..100
+  cost DOUBLE PRECISION,            -- planned cost (KZT); weight for SPI when present
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_schedule_tasks_project ON schedule_tasks(project_id);
+
+CREATE TABLE IF NOT EXISTS schedule_task_elements (
+  task_id UUID NOT NULL REFERENCES schedule_tasks(id) ON DELETE CASCADE,
+  version_group UUID NOT NULL,      -- scene_assets.version_group (survives model revisions)
+  global_id TEXT NOT NULL,
+  PRIMARY KEY (task_id, version_group, global_id)
+);
+CREATE INDEX IF NOT EXISTS idx_task_elements_element ON schedule_task_elements(version_group, global_id);

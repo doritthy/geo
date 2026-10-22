@@ -6,6 +6,7 @@
 * demo_scan.laz -- "as-built" point cloud of the lower 3 storeys (surfaces of
   slabs and walls, with noise) plus terrain, in EPSG:32642.
 * demo_site.geojson -- site boundary polygon in EPSG:32642.
+* demo_schedule.xml -- MS Project XML schedule (per storey: frame, walls, glazing).
 
 Usage:  python scripts/make_demo_data.py <output dir>
 """
@@ -224,6 +225,44 @@ def make_site_geojson() -> bytes:
     return json.dumps(gj, ensure_ascii=False).encode()
 
 
+DEMO_TASKS = [  # (name, IFC classes linked in the demo)
+    ("Каркас: колонны и плита", ("IfcColumn", "IfcSlab")),
+    ("Наружные стены", ("IfcWall",)),
+    ("Остекление", ("IfcWindow",)),
+]
+
+
+def make_schedule_xml(storeys: int = 5) -> bytes:
+    """MS Project XML: summary per storey with frame / walls / glazing tasks,
+    progress as of 2026-05-20 (floors 1-2 done, floor 3 under way)."""
+    from datetime import date, timedelta
+
+    start = date(2026, 3, 2)
+    progress = {1: (100, 100, 100), 2: (100, 100, 60), 3: (100, 70, 0)}
+    rows, uid = [], 1
+    rows.append((uid, 1, True, "Корпус А", start, start + timedelta(days=storeys * 21 + 40), 0, None))
+    for k in range(1, storeys + 1):
+        s0 = start + timedelta(days=(k - 1) * 21)
+        uid += 1
+        rows.append((uid, 2, True, f"Этаж {k}", s0, s0 + timedelta(days=60), 0, None))
+        for j, (name, _) in enumerate(DEMO_TASKS):
+            ts = s0 + timedelta(days=j * 18)
+            uid += 1
+            pct = progress.get(k, (0, 0, 0))[j]
+            rows.append((uid, 3, False, f"{name} — этаж {k}", ts, ts + timedelta(days=20), pct, 12_000_000 + 4_000_000 * (2 - j)))
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<Project xmlns="http://schemas.microsoft.com/project">',
+             "<Name>ЖК Демо</Name><Tasks>",
+             "<Task><UID>0</UID><ID>0</ID><Name>ЖК Демо</Name><OutlineLevel>0</OutlineLevel><Summary>1</Summary></Task>"]
+    for uid, level, summary, name, s0, f0, pct, cost in rows:
+        parts.append(
+            f"<Task><UID>{uid}</UID><ID>{uid}</ID><Name>{name}</Name><OutlineLevel>{level}</OutlineLevel>"
+            f"<Summary>{1 if summary else 0}</Summary><Start>{s0}T08:00:00</Start><Finish>{f0}T17:00:00</Finish>"
+            f"<PercentComplete>{pct}</PercentComplete>" + (f"<Cost>{cost}</Cost>" if cost else "") + "</Task>"
+        )
+    parts.append("</Tasks></Project>")
+    return "\n".join(parts).encode("utf-8")
+
+
 def main(out: str) -> None:
     os.makedirs(out, exist_ok=True)
     for name, data in [
@@ -231,6 +270,7 @@ def main(out: str) -> None:
         ("demo_building_v2.ifc", make_building(variant=2)),
         ("demo_scan.laz", make_scan()),
         ("demo_site.geojson", make_site_geojson()),
+        ("demo_schedule.xml", make_schedule_xml()),
     ]:
         with open(os.path.join(out, name), "wb") as fh:
             fh.write(data)

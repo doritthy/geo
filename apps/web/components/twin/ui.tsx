@@ -112,6 +112,7 @@ export const Icons = {
   globe: svg(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" /></>),
   plan: svg(<><path d="M3 3h18v18H3z" /><path d="M3 9h18M9 21V9" /></>),
   cube: svg(<><path d="M12 2l9 5v10l-9 5-9-5V7z" /><path d="M12 22V12M21 7l-9 5-9-5" /></>),
+  schedule: svg(<><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4M7 13h5M7 17h9" /></>),
   issue: svg(<><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></>),
   analysis: svg(<><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></>),
   cloud: svg(<path d="M7 18a5 5 0 01-.6-10A6 6 0 0118 9a4.5 4.5 0 01-.5 9z" />),
