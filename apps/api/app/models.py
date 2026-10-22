@@ -45,6 +45,11 @@ class Organization(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # White-label branding (twin.sql)
+    brand_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    brand_color: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logo_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logo_type: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     users: Mapped[list["User"]] = relationship(back_populates="organization")
     projects: Mapped[list["Project"]] = relationship(back_populates="organization")

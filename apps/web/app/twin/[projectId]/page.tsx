@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/AuthGuard';
 import { ApiError } from '@/lib/api';
-import { clearAuth, getStoredUser } from '@/lib/auth';
+import { clearAuth, useStoredUser } from '@/lib/auth';
 import { twinApi } from '@/lib/twin/api';
 import { useProjectCrs } from '@/lib/twin/crs';
 import { useTwinStore, type SidePanel } from '@/lib/twin/store';
@@ -31,6 +31,7 @@ import ProfileChart from '@/components/twin/ProfileChart';
 import { tr } from '@/lib/i18n';
 import LangSwitch from '@/components/LangSwitch';
 import PushToggle from '@/components/PushToggle';
+import { BrandMark } from '@/components/Branding';
 
 const CesiumViewer = dynamic(() => import('@/components/twin/CesiumViewer'), {
   ssr: false,
@@ -60,7 +61,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [clipOpen, setClipOpen] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
-  const user = getStoredUser();
+  const user = useStoredUser();
 
   const setAssets = useTwinStore((s) => s.setAssets);
   const assets = useTwinStore((s) => s.assets);
@@ -171,8 +172,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-bg-border bg-bg-panel px-2 sm:px-3">
         <button className="sm:hidden" onClick={() => setPanelOpen(!panelOpen)} aria-label={tr('Меню')}>{Icons.menu}</button>
         <Link href="/projects" className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded bg-gradient-to-br from-accent-amber to-accent-teal" />
-          <span className="hidden text-sm font-semibold lg:inline">{tr('Цифровой двойник')}</span>
+          <BrandMark fallback={tr('Цифровой двойник')} nameClassName="hidden text-sm font-semibold lg:inline" />
         </Link>
         <span className="truncate text-sm text-text-secondary">/ {project.name}</span>
         <div className="ml-2 hidden rounded-md border border-bg-border bg-bg-panel2 p-0.5 sm:flex">

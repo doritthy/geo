@@ -16,7 +16,7 @@ const config: Config = {
           border: '#232E42',
         },
         accent: {
-          teal: '#2DD4BF',
+          teal: 'rgb(var(--accent) / <alpha-value>)', // white-label: set by Branding
           amber: '#F5A524',
           blue: '#3B82F6',
           violet: '#A78BFA',

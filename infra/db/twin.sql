@@ -336,3 +336,9 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   expires_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);
+
+-- White-label: organisation branding (name in the header, logo, accent colour).
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_name TEXT;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_color TEXT;   -- #RRGGBB
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_key TEXT;      -- object key in S3
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_type TEXT;

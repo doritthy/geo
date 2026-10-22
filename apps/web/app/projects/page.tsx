@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/AuthGuard';
 import { api, ApiError } from '@/lib/api';
-import { clearAuth, getStoredUser } from '@/lib/auth';
+import { clearAuth, useStoredUser } from '@/lib/auth';
 import type { Project } from '@/lib/types';
 import { tr, locale } from '@/lib/i18n';
 import LangSwitch from '@/components/LangSwitch';
+import { BrandMark } from '@/components/Branding';
 
 function CreateProjectDialog({ onCreated, onClose }: { onCreated: (p: Project) => void; onClose: () => void }) {
   const [name, setName] = useState('');
@@ -113,7 +114,7 @@ function ProjectsPageInner() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const user = getStoredUser();
+  const user = useStoredUser();
 
   useEffect(() => {
     api
@@ -131,8 +132,7 @@ function ProjectsPageInner() {
     <div className="min-h-screen bg-bg">
       <header className="flex items-center justify-between border-b border-bg-border px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-md bg-gradient-to-br from-accent-teal to-accent-blue" />
-          <span className="text-base font-semibold tracking-tight">{tr('Цифровой двойник строительства')}</span>
+          <BrandMark fallback={tr('Цифровой двойник строительства')} nameClassName="text-base font-semibold tracking-tight" />
         </div>
         <div className="flex items-center gap-4 text-sm text-text-secondary">
           <Link href="/portfolio" className="rounded-md border border-bg-border px-3 py-1.5 hover:text-text-primary">{tr('Портфель')}</Link>

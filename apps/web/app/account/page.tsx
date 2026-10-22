@@ -6,10 +6,11 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import { request, ApiError } from '@/lib/api';
-import { getStoredUser } from '@/lib/auth';
+import { useStoredUser } from '@/lib/auth';
 import { absoluteUrl } from '@/lib/twin/api';
 import { Button, ErrorBox, Field, Input } from '@/components/twin/ui';
 import { locale, tr } from '@/lib/i18n';
+import { publishBranding, useBranding, type Branding } from '@/components/Branding';
 
 interface Token {
   id: string;
@@ -24,7 +25,7 @@ interface Token {
 const d = (s: string | null) => (s ? new Date(s).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 function AccountInner() {
-  const user = getStoredUser();
+  const user = useStoredUser();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [name, setName] = useState('');
   const [readOnly, setReadOnly] = useState(true);
@@ -113,8 +114,71 @@ function AccountInner() {
             </tbody>
           </table>
         </section>
+        {user?.role === 'admin' && <BrandingSection />}
       </main>
     </div>
+  );
+}
+
+function BrandingSection() {
+  const b = useBranding();
+  const [name, setName] = useState<string | null>(null);
+  const [color, setColor] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  if (!b) return null;
+  const nameV = name ?? b.name ?? '';
+  const colorV = color ?? b.color ?? '#2DD4BF';
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      publishBranding(await request<Branding>('/api/organization/branding', { method: 'PUT', body: JSON.stringify({ name: nameV, color: colorV }) }));
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось сохранить'));
+    }
+  }
+  async function upload(file: File) {
+    setError(null);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      publishBranding(await request<Branding>('/api/organization/branding/logo', { method: 'POST', body: fd }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : tr('Ошибка загрузки'));
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-bg-border bg-bg-panel p-4">
+      <h2 className="text-sm font-semibold">{tr('Брендинг организации')}</h2>
+      <p className="mt-1 text-xs text-text-secondary">{tr('Название продукта, логотип и фирменный цвет для всех пользователей «{o}».', { o: b.organization })}</p>
+      <form onSubmit={save} className="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+        <Field label={tr('Название в шапке')}><Input value={nameV} onChange={(e) => { setName(e.target.value); setSaved(false); }} placeholder={tr('Цифровой двойник')} /></Field>
+        <Field label={tr('Цвет акцента')}>
+          <div className="flex items-center gap-2">
+            <input type="color" value={colorV} onChange={(e) => { setColor(e.target.value); setSaved(false); }} className="h-8 w-10 cursor-pointer rounded border border-bg-border bg-transparent" />
+            <code className="text-xs text-text-secondary">{colorV.toUpperCase()}</code>
+          </div>
+        </Field>
+        <Button type="submit" variant="primary">{saved ? tr('Сохранено') : tr('Сохранить')}</Button>
+      </form>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <label className="cursor-pointer rounded-md border border-bg-border px-3 py-1.5 hover:text-text-primary">
+          {b.logo_url ? tr('Заменить логотип') : tr('Загрузить логотип')}
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+        </label>
+        {b.logo_url && (
+          <Button variant="ghost" onClick={async () => publishBranding(await request<Branding>('/api/organization/branding/logo', { method: 'DELETE' }))}>
+            {tr('Убрать логотип')}
+          </Button>
+        )}
+        <span className="text-text-muted">{tr('PNG, JPEG, WebP или SVG до 1 МБ; высота в шапке — 24 px.')}</span>
+      </div>
+      {error && <div className="mt-2"><ErrorBox>{error}</ErrorBox></div>}
+    </section>
   );
 }
 

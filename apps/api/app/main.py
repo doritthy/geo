@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routers import (
     analyses,
+    branding,
     annotations,
     assets,
     auth,
@@ -76,6 +77,7 @@ app.include_router(dashboard.router)
 app.include_router(push.router)
 app.include_router(iot.router)
 app.include_router(tokens.router)
+app.include_router(branding.router)
 
 
 @app.get("/health")

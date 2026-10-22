@@ -74,6 +74,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 - As-built: выгрузка исходного IFC с набором свойств `Twin_AsBuilt` (статус «соответствует / отклонение /
   мало точек / не отсканировано», среднее/95%/макс отклонение, число точек) и исполнительная схема отметок
   верха плит (PDF: план с точками, проект/факт/Δ, координаты в СК проекта, отметки в системе высот модели).
+- White-label: администратор задаёт название продукта, логотип и цвет акцента организации (`/account`).
 - Портфель (`/portfolio`): сравнение всех проектов пользователя — выполнение, SPI, прогноз, предписания, качество, датчики.
 - Профиль-разрез вдоль линии: линии сечения BIM и точки скана на графике.
 - Синхронизация предписаний с ACC Issues; PWA (установка на телефон, кэш статики).
@@ -138,6 +139,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | POST | `/api/schedule/tasks/{id}/elements`, `/api/projects/{id}/schedule/progress-from-analysis` | Привязка, факт по скану |
 | GET | `/api/projects/{id}/dashboard` | Дашборд |
 | GET | `/api/portfolio` | Сводка по всем доступным проектам |
+| GET | `/api/branding`, `/api/branding/logo`; PUT `/api/organization/branding`, POST/DELETE `/branding/logo` | Брендинг организации |
 | GET/POST/DELETE | `/api/tokens` | Персональные API-токены (только из сессии) |
 | GET/POST | `/api/projects/{id}/sensors`; GET/PATCH/DELETE `/api/sensors/{id}` | Датчики IoT (токен — только редакторам) |
 | GET | `/api/sensors/{id}/readings?hours=&points=`, `/api/projects/{id}/sensor-alerts` | Ряды (усреднение + min/max), события |

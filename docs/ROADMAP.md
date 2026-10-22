@@ -79,7 +79,7 @@
 | Open API | ✅ | FastAPI + Swagger `/docs`; персональные API-токены (`/account`, `routers/tokens.py`): права владельца, «только чтение», срок, отзыв. Power BI — через веб-коннектор с заголовком Authorization |
 | As-built BIM, исполнительные схемы | 🟡 | `twin/asbuilt.py`: исходный IFC + набор свойств `Twin_AsBuilt` по каждому элементу (статус, отклонения, точки скана) — `GET /api/analyses/{id}/as-built.ifc`; `twin/exec_scheme.py`: исполнительная схема отметок верха плит (сетка контрольных точек, проект/факт/Δ, координаты в СК проекта) — `executive-scheme.pdf`. Геометрия IFC не перестраивается по скану; схемы планового положения колонн/стен — ⬜ |
 | Аналитика портфеля | ✅ | `/portfolio`, `GET /api/portfolio`: выполнение факт/план, SPI, прогноз, предписания, качество, датчики по всем проектам пользователя |
-| White-label | ⬜ | |
+| White-label | ✅ | `routers/branding.py`, `components/Branding.tsx`: название, логотип (PNG/JPEG/WebP/SVG без скриптов), фирменный цвет акцента (CSS-переменная `--accent`) на организацию; настройка — `/account` (админ) |
 
 ---
 

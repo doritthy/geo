@@ -110,3 +110,11 @@ export function useCurrentUser(): { user: User | null | undefined; loading: bool
 
   return { user, loading };
 }
+
+/** Stored user for rendering: null on the server and during hydration, the
+ * localStorage value right after mount (avoids hydration mismatches). */
+export function useStoredUser(): User | null {
+  const [user, setUser] = useState<User | null>(null);
+  useEffect(() => setUser(getStoredUser()), []);
+  return user;
+}

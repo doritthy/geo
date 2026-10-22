@@ -119,7 +119,7 @@ Python-зависимости — в venv (`pip install -r requirements.txt -r r
 
 Конвертеры вызывают `app.progress.report("Этап", доля)` в своих циклах; задача оборачивается в
 `progress.track(file_id)`. Запись идёт отдельной транзакцией в `files.metadata.progress` (не чаще 1 раза/с),
-UI (`LayersPanel` → `FileProgress`) показывает этап и полосу. Новые этапы — добавить перевод в `i18n.kk.ts`.
+UI (`LayersPanel` → `FileProgress`) показывает этап и полосу. Новые этапы — добавить перевод в `i18n.kk.ts`. Проверка пропусков: `node apps/web/scripts/i18n-missing.js`.
 
 ## Локализация (ru / kk)
 
@@ -127,6 +127,8 @@ UI (`LayersPanel` → `FileProgress`) показывает этап и поло�
   и добавляйте перевод в `apps/web/lib/i18n.kk.ts` (ключ = русский текст). Нет перевода — показывается русский.
 - Язык хранится в cookie `lang`; смена — перезагрузка страницы (`setLang`). Сервер всегда рендерит русский,
   поэтому при `lang=kk` `app/layout.tsx` оборачивает страницу в `LangGate` (рендер только после mount — без hydration mismatch).
+- Пользователя в рендере брать через `useStoredUser()` (не `getStoredUser()` — иначе ошибка гидратации).
+- Акцентный цвет `accent-teal` — CSS-переменная `--accent` (white-label); новые жёсткие `#2DD4BF` в UI не добавлять.
 - `tr()` вызывается при рендере или на уровне модуля (язык фиксирован на время жизни страницы).
   Строки с переменными — `tr('Найдено {n}', { n })`, не шаблонные литералы. Даты/числа — `toLocaleString(locale())`.
 

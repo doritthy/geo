@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWorkspaceStore, type ViewMode } from '@/lib/store';
 import { api } from '@/lib/api';
-import { clearAuth, getStoredUser } from '@/lib/auth';
+import { clearAuth, useStoredUser } from '@/lib/auth';
 import type { Project, WellSummary } from '@/lib/types';
 
 const MODES: { key: ViewMode; label: string }[] = [
@@ -36,7 +36,7 @@ export default function TopNav({ project, wells }: { project: Project; wells: We
   const viewMode = useWorkspaceStore((s) => s.viewMode);
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
   const setIngestDialogOpen = useWorkspaceStore((s) => s.setIngestDialogOpen);
-  const user = getStoredUser();
+  const user = useStoredUser();
 
   const [projects, setProjects] = useState<Project[]>([]);
   useEffect(() => {
