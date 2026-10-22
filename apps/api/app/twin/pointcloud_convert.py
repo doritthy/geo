@@ -231,10 +231,19 @@ def convert_point_cloud(path: str | None, source_format: str, out_dir: str, opti
                 cells = (norm[remaining] * g).astype(np.int64)
                 keys = cells[:, 0] + cells[:, 1] * g + cells[:, 2] * g * g
                 uniq, first = np.unique(keys, return_index=True)
-                fresh = ~np.isin(uniq, occupied[lvl], assume_unique=True)
+                occ = occupied[lvl]
+                if len(occ):
+                    pos = np.minimum(np.searchsorted(occ, uniq), len(occ) - 1)
+                    fresh = occ[pos] != uniq
+                else:
+                    fresh = np.ones(len(uniq), dtype=bool)
                 take = first[fresh]
                 level[remaining[take]] = lvl
-                occupied[lvl] = np.union1d(occupied[lvl], uniq[fresh])
+                # Both runs are sorted: a stable sort (timsort) merges them in
+                # linear time, unlike union1d which re-hashes everything per chunk.
+                merged = np.concatenate([occ, uniq[fresh]])
+                merged.sort(kind="stable")
+                occupied[lvl] = merged
                 mask = np.ones(len(remaining), dtype=bool)
                 mask[take] = False
                 remaining = remaining[mask]
