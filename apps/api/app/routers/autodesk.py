@@ -21,7 +21,7 @@ from app.deps import project_editor, project_viewer
 from app.integrations import autodesk_service as svc
 from app.integrations.aps import APSError
 from app.queue import enqueue
-from app.models import AutodeskConnection, AutodeskLink, Project, User
+from app.models import AutodeskConnection, AutodeskIssueSync, AutodeskLink, Project, User
 from app.security import get_current_user
 
 router = APIRouter(prefix="/api", tags=["autodesk"])
@@ -300,3 +300,77 @@ async def webhook(request: Request, background_tasks: BackgroundTasks) -> dict:
         return {"queued": len(links)}
     finally:
         db.close()
+
+
+# ---------- ACC Issues sync ----------
+
+
+class IssueSyncConfig(BaseModel):
+    aps_project_id: str
+    subtype_id: str | None = None
+
+
+@router.get("/integrations/autodesk/projects/{aps_project_id}/issue-subtypes")
+def issue_subtypes(aps_project_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[dict]:
+    _require_configured()
+    try:
+        return svc.client_factory().issue_subtypes(_token(db, user), aps_project_id)
+    except APSError as exc:
+        raise _aps_error(exc) from exc
+
+
+def _cfg_out(cfg: AutodeskIssueSync | None) -> dict | None:
+    if cfg is None:
+        return None
+    return {"aps_project_id": cfg.aps_project_id, "subtype_id": cfg.subtype_id,
+            "last_pulled_at": cfg.last_pulled_at, "last_result": cfg.last_result}
+
+
+@router.get("/projects/{project_id}/autodesk/issues-sync")
+def get_issue_sync(project: Project = Depends(project_viewer), db: Session = Depends(get_db)) -> dict | None:
+    return _cfg_out(db.get(AutodeskIssueSync, project.id))
+
+
+@router.post("/projects/{project_id}/autodesk/issues-sync")
+def set_issue_sync(payload: IssueSyncConfig, project: Project = Depends(project_editor), db: Session = Depends(get_db),
+                   user: User = Depends(get_current_user)) -> dict | None:
+    _require_configured()
+    subtype = payload.subtype_id
+    if not subtype:
+        try:
+            subtypes = svc.client_factory().issue_subtypes(_token(db, user), payload.aps_project_id)
+        except APSError as exc:
+            raise _aps_error(exc) from exc
+        if not subtypes:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="В проекте ACC нет активных типов замечаний")
+        subtype = subtypes[0]["id"]
+    from app.integrations.aps import APSClient
+
+    cfg = db.get(AutodeskIssueSync, project.id) or AutodeskIssueSync(project_id=project.id)
+    cfg.user_id = user.id
+    cfg.aps_project_id = APSClient.acc_project_id(payload.aps_project_id)
+    cfg.subtype_id = subtype
+    db.add(cfg)
+    db.commit()
+    return _cfg_out(cfg)
+
+
+@router.delete("/projects/{project_id}/autodesk/issues-sync", status_code=status.HTTP_204_NO_CONTENT)
+def delete_issue_sync(project: Project = Depends(project_editor), db: Session = Depends(get_db)):
+    cfg = db.get(AutodeskIssueSync, project.id)
+    if cfg:
+        db.delete(cfg)
+        db.commit()
+
+
+@router.post("/projects/{project_id}/autodesk/issues-sync/run")
+def run_issue_sync(project: Project = Depends(project_editor), db: Session = Depends(get_db)) -> dict:
+    _require_configured()
+    from app.integrations.acc_issues import run_sync
+
+    try:
+        return run_sync(db, project)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except APSError as exc:
+        raise _aps_error(exc) from exc

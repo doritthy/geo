@@ -41,6 +41,8 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
   const [links, setLinks] = useState<LinkOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [issueSync, setIssueSync] = useState<{ aps_project_id: string; last_pulled_at: string | null; last_result: Record<string, number | string> } | null>(null);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const loadLinks = useCallback(
     () => request<LinkOut[]>(`/api/projects/${projectId}/autodesk/imports`).then(setLinks).catch(() => {}),
@@ -50,7 +52,31 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
   useEffect(() => {
     request<typeof status>('/api/integrations/autodesk/status').then(setStatus).catch(() => setStatus(null));
     loadLinks();
-  }, [loadLinks]);
+    request<typeof issueSync>(`/api/projects/${projectId}/autodesk/issues-sync`).then(setIssueSync).catch(() => {});
+  }, [loadLinks, projectId]);
+
+  async function configureIssueSync(apsProjectId: string) {
+    setSyncMsg(null);
+    try {
+      setIssueSync(await request(`/api/projects/${projectId}/autodesk/issues-sync`, {
+        method: 'POST', body: JSON.stringify({ aps_project_id: apsProjectId }),
+      }));
+      setSyncMsg('Проект ACC связан. Запустите синхронизацию.');
+    } catch (err) {
+      setSyncMsg(err instanceof ApiError ? err.detail : 'Не удалось настроить');
+    }
+  }
+
+  async function runIssueSync() {
+    setSyncMsg('Синхронизация…');
+    try {
+      const r = await request<Record<string, number>>(`/api/projects/${projectId}/autodesk/issues-sync/run`, { method: 'POST' });
+      setSyncMsg(`Отправлено новых: ${r.pushed_new}, обновлено в ACC: ${r.pushed_updates}, получено изменений: ${r.pulled_updates}, импортировано из ACC: ${r.imported}`);
+      request<typeof issueSync>(`/api/projects/${projectId}/autodesk/issues-sync`).then(setIssueSync).catch(() => {});
+    } catch (err) {
+      setSyncMsg(err instanceof ApiError ? err.detail : 'Ошибка синхронизации');
+    }
+  }
 
   // Poll while imports are running; refresh the scene when they finish.
   useEffect(() => {
@@ -183,6 +209,31 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
               Автообновление по вебхукам выключено (не задан APS_WEBHOOK_URL) — используйте «Синхр.».
             </p>
           )}
+        </div>
+      )}
+
+      {status.connected && (
+        <div className="space-y-2 rounded-lg border border-bg-border p-3">
+          <div className="text-sm font-semibold">Предписания ↔ ACC Issues</div>
+          {issueSync ? (
+            <>
+              <div className="text-[11px] text-text-muted">
+                Проект ACC {issueSync.aps_project_id.slice(0, 8)}… · последняя синхронизация{' '}
+                {issueSync.last_pulled_at ? new Date(issueSync.last_pulled_at).toLocaleString('ru-RU') : '—'}
+              </div>
+              <Button variant="primary" onClick={runIssueSync}>Синхронизировать сейчас</Button>
+            </>
+          ) : path.find((p) => p.node.type === 'projects') ? (
+            <Button onClick={() => configureIssueSync(path.find((p) => p.node.type === 'projects')!.node.id)}>
+              Связать с проектом «{path.find((p) => p.node.type === 'projects')!.node.name}»
+            </Button>
+          ) : (
+            <p className="text-[11px] text-text-muted">Откройте проект ACC в обзоре выше, чтобы связать с ним реестр предписаний.</p>
+          )}
+          {syncMsg && <div className="text-[11px] text-text-secondary">{syncMsg}</div>}
+          <p className="text-[10px] text-text-muted">
+            Статусы сопоставляются (На проверке ↔ in_review). Исполнители и «булавки» на чертежах не переносятся — ограничение API ACC.
+          </p>
         </div>
       )}
 

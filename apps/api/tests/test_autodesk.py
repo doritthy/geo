@@ -26,6 +26,8 @@ class MockAPS:
         self.ifc_v1 = make_ifc()
         self.ifc_v2 = make_ifc([("Стена 1", 0.0), ("Стена 2", 7.0), ("Стена 4", 18.0)])
         self.ifc_rvt = make_ifc([("Стена R", 0.0)])
+        self.acc_issues: dict[str, dict] = {}
+        self.patches: list[dict] = []
 
     def version(self, item: str) -> dict:
         n = self.versions[item]
@@ -85,6 +87,26 @@ class MockAPS:
             return httpx.Response(200)
         if path.endswith("/signeds3upload") and request.method == "POST":
             return httpx.Response(200, json={"objectId": "urn:adsk.objects:os.object:twin_x/house.rvt"})
+        if path.startswith("/construction/issues/v1/projects/"):
+            assert "/projects/b." not in path  # Issues API wants the bare project UUID
+            if path.endswith("/issue-types"):
+                return httpx.Response(200, json={"results": [{"id": "t1", "title": "Качество", "isActive": True,
+                                                              "subtypes": [{"id": "st1", "title": "Дефект", "isActive": True}]}]})
+            if path.endswith("/issues") and request.method == "POST":
+                body = json.loads(request.content)
+                assert body["issueSubtypeId"] == "st1" and body["published"] is True
+                iid = f"acc-{len(self.acc_issues) + 1}"
+                self.acc_issues[iid] = {**body, "id": iid, "updatedAt": "2026-01-01T00:00:00.000Z"}
+                return httpx.Response(201, json=self.acc_issues[iid])
+            if path.endswith("/issues") and request.method == "GET":
+                res = list(self.acc_issues.values())
+                return httpx.Response(200, json={"results": res, "pagination": {"limit": 100, "offset": 0, "totalResults": len(res)}})
+            if request.method == "PATCH":
+                iid = path.rsplit("/", 1)[-1]
+                body = json.loads(request.content)
+                self.patches.append(body)
+                self.acc_issues[iid].update(body)
+                return httpx.Response(200, json=self.acc_issues[iid])
         if path.endswith("/dm.version.added/hooks"):
             self.hooks.append(json.loads(request.content))
             return httpx.Response(201, headers={"Location": "https://developer.api.autodesk.com/webhooks/v1/hooks/HOOK1"})
@@ -192,3 +214,41 @@ def test_rvt_upload_uses_model_derivative(client, aps):
     record = client.get(f"/api/files/{resp.json()['id']}", headers=h).json()
     assert record["status"] == "ready", record["error_message"]
     assert any("/oss/v2/buckets" in c for c in aps.calls)
+
+
+def test_acc_issues_two_way_sync(client, aps):
+    h = _headers(client)
+    _connect(client, h)
+    pid = client.post("/api/projects", json={"name": "ACC"}, headers=h).json()["id"]
+    i1 = client.post(f"/api/projects/{pid}/issues", headers=h, json={"title": "Трещина", "latitude": 51.1, "longitude": 71.4}).json()
+    i2 = client.post(f"/api/projects/{pid}/issues", headers=h, json={"title": "Мусор"}).json()
+
+    cfg = client.post(f"/api/projects/{pid}/autodesk/issues-sync", headers=h, json={"aps_project_id": "b.proj"}).json()
+    assert cfg["aps_project_id"] == "proj" and cfg["subtype_id"] == "st1"
+
+    r = client.post(f"/api/projects/{pid}/autodesk/issues-sync/run", headers=h).json()
+    assert r["pushed_new"] == 2 and r["imported"] == 0
+    first = aps.acc_issues["acc-1"]
+    assert first["title"] == "№1 Трещина" and first["gpsCoordinates"] == {"latitude": 51.1, "longitude": 71.4}
+
+    # ACC side: issue 1 closed later, plus a new issue created in ACC
+    aps.acc_issues["acc-1"].update(status="closed", updatedAt="2099-01-01T00:00:00.000Z")
+    aps.acc_issues["acc-9"] = {"id": "acc-9", "title": "Из ACC", "status": "open", "updatedAt": "2099-01-01T00:00:00.000Z"}
+    r = client.post(f"/api/projects/{pid}/autodesk/issues-sync/run", headers=h).json()
+    assert r["pulled_updates"] >= 1 and r["imported"] == 1 and r["pushed_new"] == 0
+    assert client.get(f"/api/issues/{i1['id']}", headers=h).json()["status"] == "closed"
+    titles = [i["title"] for i in client.get(f"/api/projects/{pid}/issues", headers=h).json()]
+    assert "Из ACC" in titles
+
+    # Local edit -> pushed as PATCH on the next run
+    import time
+
+    time.sleep(0.01)
+    from app.db import engine
+
+    with engine.begin() as conn:  # simulate an edit well after the last sync
+        conn.exec_driver_sql("UPDATE issues SET acc_synced_at = acc_synced_at - interval '1 hour' WHERE number = 2")
+    client.patch(f"/api/issues/{i2['id']}", headers=h, json={"title": "Мусор на 3 этаже"})
+    r = client.post(f"/api/projects/{pid}/autodesk/issues-sync/run", headers=h).json()
+    assert r["pushed_updates"] >= 1
+    assert any(p.get("title") == "№2 Мусор на 3 этаже" for p in aps.patches)

@@ -240,3 +240,17 @@ CREATE TABLE IF NOT EXISTS jobs (
   finished_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_queued ON jobs(status, id);
+
+-- Two-way sync of issues with ACC Issues (per project).
+CREATE TABLE IF NOT EXISTS autodesk_issue_sync (
+  project_id UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,  -- whose 3-legged token is used
+  aps_project_id TEXT NOT NULL,                          -- ACC project UUID (without "b.")
+  subtype_id TEXT NOT NULL,                              -- default issueSubtypeId for new issues
+  last_pulled_at TIMESTAMPTZ,
+  last_result JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS acc_issue_id TEXT;
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS acc_synced_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_issues_acc ON issues(acc_issue_id);

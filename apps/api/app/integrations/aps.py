@@ -270,3 +270,50 @@ class APSClient:
             raise APSError(f"Webhook create failed: {resp.status_code} {resp.text[:200]}", resp.status_code)
         location = resp.headers.get("Location", "")
         return location.rstrip("/").rsplit("/", 1)[-1] or None
+
+    # ---------- ACC Issues (construction/issues/v1; 3-legged only) ----------
+
+    @staticmethod
+    def acc_project_id(project_id: str) -> str:
+        """Data Management ids carry a 'b.' prefix; the Issues API wants the bare UUID."""
+        return project_id[2:] if project_id.startswith("b.") else project_id
+
+    def issue_subtypes(self, token: str, project_id: str) -> list[dict]:
+        pid = self.acc_project_id(project_id)
+        body = self._get(token, f"/construction/issues/v1/projects/{pid}/issue-types",
+                         params={"include": "subtypes", "filter[isActive]": "true"})
+        out = []
+        for t in body.get("results", []):
+            for st in t.get("subtypes", []):
+                if st.get("isActive", True):
+                    out.append({"id": st["id"], "title": f"{t.get('title', '')} / {st.get('title', '')}".strip(" /")})
+        return out
+
+    def list_issues(self, token: str, project_id: str, updated_since: str | None = None) -> list[dict]:
+        pid = self.acc_project_id(project_id)
+        out, offset = [], 0
+        while True:
+            params = {"limit": 100, "offset": offset, "sortBy": "updatedAt"}
+            if updated_since:
+                params["filter[updatedAt]"] = f"{updated_since}.."
+            body = self._get(token, f"/construction/issues/v1/projects/{pid}/issues", params=params)
+            results = body.get("results", [])
+            out.extend(results)
+            total = body.get("pagination", {}).get("totalResults", len(out))
+            offset += len(results)
+            if not results or offset >= total:
+                return out
+
+    def create_issue(self, token: str, project_id: str, body: dict) -> dict:
+        pid = self.acc_project_id(project_id)
+        return self._post(token, f"/construction/issues/v1/projects/{pid}/issues", body).json()
+
+    def update_issue(self, token: str, project_id: str, issue_id: str, body: dict) -> dict:
+        pid = self.acc_project_id(project_id)
+        resp = self.http.patch(
+            f"{self.base}/construction/issues/v1/projects/{pid}/issues/{issue_id}", json=body,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        )
+        if resp.status_code >= 400:
+            raise APSError(f"PATCH issue {issue_id}: {resp.status_code} {resp.text[:300]}", resp.status_code)
+        return resp.json()

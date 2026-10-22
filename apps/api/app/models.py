@@ -489,6 +489,8 @@ class Issue(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    acc_issue_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    acc_synced_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     attachments: Mapped[list["IssueAttachment"]] = relationship(
         cascade="all, delete-orphan", order_by="IssueAttachment.created_at"
@@ -558,3 +560,19 @@ class ScheduleTaskElement(Base):
     )
     version_group: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     global_id: Mapped[str] = mapped_column(Text, primary_key=True)
+
+
+class AutodeskIssueSync(Base):
+    __tablename__ = "autodesk_issue_sync"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    aps_project_id: Mapped[str] = mapped_column(Text, nullable=False)
+    subtype_id: Mapped[str] = mapped_column(Text, nullable=False)
+    last_pulled_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    last_result: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
