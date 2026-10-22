@@ -5,6 +5,7 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import type { CrsInfo, TwinProject } from '@/lib/twin/types';
 import { Button, ErrorBox, Field, Input, Select } from './ui';
+import MembersSection from './MembersSection';
 
 /** Project settings: name/description and the project CRS (EPSG / СК-42 /
  * custom PROJ string for МСК), used for coordinate readouts and as the
@@ -89,6 +90,7 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
         <Button variant="primary" onClick={save} disabled={!!crsError}>Сохранить</Button>
         {saved && <span className="text-xs text-accent-teal">Сохранено</span>}
       </div>
+      <MembersSection projectId={project.id} />
     </div>
   );
 }
