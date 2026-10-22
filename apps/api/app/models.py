@@ -383,6 +383,9 @@ class DocumentVersion(Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     uploaded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # Extracted text for full-text search (deferred: can be megabytes).
+    text_content: Mapped[str | None] = mapped_column(Text, nullable=True, deferred=True)
+    text_status: Mapped[str] = mapped_column(Text, nullable=False, server_default="pending")
 
     document: Mapped["Document"] = relationship(back_populates="versions")
 

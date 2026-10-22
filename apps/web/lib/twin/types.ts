@@ -134,6 +134,7 @@ export interface DocumentVersion {
   size_bytes: number;
   comment: string | null;
   uploaded_at: string;
+  text_status?: 'pending' | 'ready' | 'none' | 'error';
 }
 
 export interface DocumentSummary {
@@ -144,6 +145,8 @@ export interface DocumentSummary {
   description: string | null;
   created_at: string;
   latest_version: DocumentVersion | null;
+  /** Matching text fragment; hits are wrapped in \u0001 … \u0002. */
+  snippet?: string | null;
 }
 
 export interface DocumentDetail extends DocumentSummary {

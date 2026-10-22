@@ -55,10 +55,21 @@ def _autodesk_import(payload: dict) -> None:
         db.close()
 
 
+def _document_text(payload: dict) -> None:
+    from app.twin.doc_text import index_version
+
+    db = SessionLocal()
+    try:
+        index_version(db, uuid.UUID(payload["version_id"]))
+    finally:
+        db.close()
+
+
 HANDLERS: dict[str, Callable[[dict], None]] = {
     "parse_file": _parse_file,
     "analysis": _analysis,
     "autodesk_import": _autodesk_import,
+    "document_text": _document_text,
 }
 
 

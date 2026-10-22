@@ -368,3 +368,47 @@ def test_point_cloud_tiles_decode_to_source_location(client):
     to_utm = Transformer.from_crs("EPSG:4978", "EPSG:32642", always_xy=True)
     x, y, _ = to_utm.transform(*world)
     assert 500000 <= x <= 500100 and 5650000 <= y <= 5650080
+
+
+def _pdf_with_text(lines: list[str]) -> bytes:
+    import io
+
+    from reportlab.pdfgen import canvas
+
+    from app.twin.report import _font
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf)
+    c.setFont(_font(), 11)
+    for i, line in enumerate(lines):
+        c.drawString(50, 800 - 16 * i, line)
+    c.showPage()
+    c.drawString(50, 800, "page two")
+    c.save()
+    return buf.getvalue()
+
+
+def test_document_fulltext_search(client):
+    h = _headers(client)
+    pid = _project(client, h)
+    pdf = _pdf_with_text(["Пояснительная записка", "Армирование плит перекрытия выполнить сетками 200x200."])
+    resp = client.post(f"/api/projects/{pid}/documents", data={"title": "ПЗ", "doc_type": "pd"},
+                       files={"file": ("pz.pdf", pdf)}, headers=h)
+    assert resp.status_code == 201, resp.text
+    doc = client.get(f"/api/documents/{resp.json()['id']}", headers=h).json()
+    assert doc["latest_version"]["text_status"] == "ready"
+    client.post(f"/api/projects/{pid}/documents", data={"title": "Прочее"},
+                files={"file": ("notes.txt", "Монтаж окон".encode())}, headers=h)
+
+    # Russian stemming: "армирования плиты" matches "Армирование плит".
+    found = client.get(f"/api/projects/{pid}/documents", params={"q": "армирования плиты"}, headers=h).json()
+    assert [d["title"] for d in found] == ["ПЗ"]
+    assert "\u0001Армирование\u0002" in found[0]["snippet"]
+    assert [d["title"] for d in client.get(f"/api/projects/{pid}/documents", params={"q": "монтажа"}, headers=h).json()] == ["Прочее"]
+    # Title/code matches still work and carry no snippet.
+    by_title = client.get(f"/api/projects/{pid}/documents", params={"q": "ПЗ"}, headers=h).json()
+    assert by_title[0]["title"] == "ПЗ" and by_title[0]["snippet"] is None
+    # A binary without a text layer is just not searchable.
+    bad = client.post(f"/api/projects/{pid}/documents", data={"title": "Скан"},
+                      files={"file": ("scan.pdf", b"%PDF-1.4 broken")}, headers=h).json()
+    assert client.get(f"/api/documents/{bad['id']}", headers=h).json()["latest_version"]["text_status"] in ("none", "error")

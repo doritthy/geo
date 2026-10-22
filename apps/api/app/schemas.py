@@ -390,6 +390,7 @@ class DocumentVersion(BaseModel):
     size_bytes: int
     comment: str | None
     uploaded_at: datetime
+    text_status: str = "pending"  # pending | ready | none (no text layer) | error
 
 
 class DocumentLink(BaseModel):
@@ -415,6 +416,9 @@ class DocumentSummary(BaseModel):
     description: str | None
     created_at: datetime
     latest_version: DocumentVersion | None = None
+    # Fragment of the matching text when searching; matches are wrapped in
+    # \u0001 … \u0002 so the client can highlight without trusting HTML.
+    snippet: str | None = None
 
 
 class DocumentDetail(DocumentSummary):

@@ -254,3 +254,9 @@ CREATE TABLE IF NOT EXISTS autodesk_issue_sync (
 ALTER TABLE issues ADD COLUMN IF NOT EXISTS acc_issue_id TEXT;
 ALTER TABLE issues ADD COLUMN IF NOT EXISTS acc_synced_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_issues_acc ON issues(acc_issue_id);
+
+-- Full-text search over document contents (PDF text layer, DOCX, XLSX, TXT).
+ALTER TABLE document_versions ADD COLUMN IF NOT EXISTS text_content TEXT;
+ALTER TABLE document_versions ADD COLUMN IF NOT EXISTS text_status TEXT NOT NULL DEFAULT 'pending';
+CREATE INDEX IF NOT EXISTS idx_document_versions_fts
+  ON document_versions USING GIN (to_tsvector('russian', coalesce(text_content, '')));

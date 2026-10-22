@@ -129,8 +129,10 @@ function DocumentCard({ summary, onChanged }: { summary: DocumentSummary; onChan
         </div>
         <div className="mt-0.5 text-[11px] text-text-muted">
           {summary.code && `${summary.code} · `}
-          {latest ? `версия ${latest.version} · ${formatBytes(latest.size_bytes)}` : tr('без файла')}
+          {latest ? `${tr('версия')} ${latest.version} · ${formatBytes(latest.size_bytes)}` : tr('без файла')}
+          {latest?.text_status === 'none' && <span title={tr('Нет текстового слоя — поиск только по названию')}> · {tr('без текста')}</span>}
         </div>
+        {summary.snippet && <Snippet text={summary.snippet} />}
       </button>
       {open && (
         <div className="space-y-2 border-t border-bg-border px-2.5 py-2">
@@ -193,7 +195,7 @@ export default function DocumentsPanel({ projectId }: { projectId: string }) {
       ) : (
         <Button variant="primary" onClick={() => setAdding(true)}>{tr('+ Загрузить документ')}</Button>
       )}
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Поиск по названию, шифру, файлу…')} />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('Поиск по названию, шифру, тексту…')} />
       <div className="flex gap-2">
         <Select value={docType} onChange={(e) => setDocType(e.target.value as DocType | '')}>
           <option value="">{tr('Все типы')}</option>
@@ -209,6 +211,17 @@ export default function DocumentsPanel({ projectId }: { projectId: string }) {
         </label>
       )}
       {docs.length === 0 ? <Empty>{tr('Документов не найдено.')}</Empty> : docs.map((d) => <DocumentCard key={d.id} summary={d} onChanged={load} />)}
+    </div>
+  );
+}
+
+
+/** Search hit fragment from the server; \u0001/\u0002 delimit matches. */
+function Snippet({ text }: { text: string }) {
+  const parts = text.split(/[\u0001\u0002]/);
+  return (
+    <div className="mt-1 line-clamp-3 text-[11px] text-text-secondary">
+      {parts.map((p, i) => (i % 2 ? <mark key={i} className="rounded bg-accent-amber/30 px-0.5 text-text-primary">{p}</mark> : <span key={i}>{p}</span>))}
     </div>
   );
 }
