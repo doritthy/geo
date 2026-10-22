@@ -64,10 +64,11 @@ class ParsedMapRaster:
     bounds_geojson: dict
 
 
-def parse_geotiff_map_raster(raw: bytes, crs_epsg_hint: int | None = None, max_dim: int = 4000) -> ParsedMapRaster:
+def parse_geotiff_map_raster(raw: bytes | str, crs_epsg_hint: int | None = None, max_dim: int = 4000) -> ParsedMapRaster:
+    """`raw` is the file content or a path (large rasters: avoid loading into memory)."""
     dst_crs = CRS.from_epsg(4326)
 
-    with MemoryFile(raw) as memfile, memfile.open() as src:
+    with (rasterio.open(raw) if isinstance(raw, str) else MemoryFile(raw).open()) as src:
         src_crs = src.crs or CRS.from_epsg(crs_epsg_hint or 4326)
 
         transform, out_w, out_h = calculate_default_transform(src_crs, dst_crs, src.width, src.height, *src.bounds)

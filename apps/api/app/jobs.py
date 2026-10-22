@@ -26,8 +26,8 @@ from app.parsers.surfer_grd_parser import parse_surfer_grd
 from app.parsers.trajectory_csv_parser import parse_csv_trajectory
 from app.parsers.vector_parser import VECTOR_FORMATS, parse_vector
 from app.parsers.xyz_parser import parse_xyz
-from app.storage import get_bytes, upload_bytes
-from app.progress import track
+from app.storage import download_to_file, get_bytes, upload_bytes, upload_directory
+from app.progress import report, track
 from app.twin.jobs import TWIN_CATEGORIES, process_twin_file
 
 logger = logging.getLogger(__name__)
@@ -236,24 +236,47 @@ def _process_surface(db: Session, file: FileRecord, parsed) -> None:
 
 
 def _process_geotiff(db: Session, file: FileRecord) -> None:
-    raw = get_bytes(file.storage_key)
     crs_hint = file.metadata_.get("crs_epsg")
 
     if file.category == "map_raster":
-        parsed = parse_geotiff_map_raster(raw, crs_epsg_hint=crs_hint)
-        name = os.path.splitext(file.filename)[0] or "raster layer"
-        raster_key = f"projects/{file.project_id}/map_layers/{uuid.uuid4()}/raster.png"
-        upload_bytes(raster_key, parsed.png_bytes, content_type="image/png")
-        layer = MapLayer(
-            project_id=file.project_id, source_file_id=file.id, name=name, layer_kind="raster",
-            crs_epsg=4326, bounds_geojson=parsed.bounds_geojson, storage_key=raster_key,
-        )
-        db.add(layer)
-        db.flush()
-        file.metadata_ = {**file.metadata_, "map_layer_id": str(layer.id)}
+        with track(file.id):
+            _process_map_raster(db, file, crs_hint)
     else:
-        parsed = parse_geotiff_surface(raw, crs_epsg_hint=crs_hint)
+        parsed = parse_geotiff_surface(get_bytes(file.storage_key), crs_epsg_hint=crs_hint)
         _process_surface(db, file, parsed)
+
+
+def _process_map_raster(db: Session, file: FileRecord, crs_hint: int | None) -> None:
+    """Preview PNG (2D map, overview) + XYZ tile pyramid (full resolution in 3D)."""
+    import shutil
+    import tempfile
+
+    from rasterio.crs import CRS
+
+    from app.twin.raster_tiles import build_pyramid
+
+    work = tempfile.mkdtemp(prefix="raster-")
+    try:
+        path = os.path.join(work, "source.tif")
+        report("Загрузка исходника")
+        download_to_file(file.storage_key, path)
+        parsed = parse_geotiff_map_raster(path, crs_epsg_hint=crs_hint, max_dim=2048)
+        tiles = build_pyramid(path, os.path.join(work, "tiles"), CRS.from_epsg(crs_hint) if crs_hint else None)
+        prefix = f"projects/{file.project_id}/map_layers/{uuid.uuid4()}"
+        upload_bytes(f"{prefix}/raster.png", parsed.png_bytes, content_type="image/png")
+        report("Публикация тайлов")
+        upload_directory(f"{prefix}/tiles", os.path.join(work, "tiles"))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    name = (file.metadata_.get("options") or {}).get("name") or os.path.splitext(file.filename)[0] or "raster layer"
+    layer = MapLayer(
+        project_id=file.project_id, source_file_id=file.id, name=name, layer_kind="raster",
+        crs_epsg=4326, bounds_geojson=parsed.bounds_geojson, storage_key=f"{prefix}/raster.png",
+        tiles={**tiles, "prefix": f"{prefix}/tiles"},
+    )
+    db.add(layer)
+    db.flush()
+    file.metadata_ = {**file.metadata_, "map_layer_id": str(layer.id)}
 
 
 def _process_surfer_grd(db: Session, file: FileRecord) -> None:
@@ -271,7 +294,7 @@ def _process_xyz(db: Session, file: FileRecord) -> None:
 def _process_shapefile(db: Session, file: FileRecord) -> None:
     raw = get_bytes(file.storage_key)
     parsed = parse_shapefile(raw, file.filename)
-    name = os.path.splitext(file.filename)[0] or "vector layer"
+    name = (file.metadata_.get("options") or {}).get("name") or os.path.splitext(file.filename)[0] or "vector layer"
     layer = MapLayer(
         project_id=file.project_id, source_file_id=file.id, name=name, layer_kind="vector",
         crs_epsg=parsed.crs_epsg, bounds_geojson=parsed.bounds_geojson, geojson=parsed.geojson,
@@ -295,7 +318,7 @@ def _vector_crs_hint(db: Session, file: FileRecord):
 def _process_vector(db: Session, file: FileRecord) -> None:
     raw = get_bytes(file.storage_key)
     parsed = parse_vector(raw, file.filename, file.source_format, _vector_crs_hint(db, file))
-    name = os.path.splitext(file.filename)[0] or "vector layer"
+    name = (file.metadata_.get("options") or {}).get("name") or os.path.splitext(file.filename)[0] or "vector layer"
     layer = MapLayer(
         project_id=file.project_id, source_file_id=file.id, name=name, layer_kind="vector",
         crs_epsg=4326, bounds_geojson=parsed.bounds_geojson, geojson=parsed.geojson,

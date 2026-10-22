@@ -80,3 +80,28 @@ def test_geotiff_map_raster_end_to_end(client, fixtures_dir):
     assert detail["layer_kind"] == "raster"
     assert detail["image_url"].startswith("http")
     assert detail["bounds_geojson"]["type"] == "Polygon"
+
+    # XYZ pyramid: a tile over the raster has content, one far away is empty.
+    assert detail["tiles_url"].endswith("/{z}/{x}/{y}.png")
+    z = detail["max_zoom"]
+    assert detail["min_zoom"] <= z
+    import io
+    import math
+
+    from PIL import Image
+
+    lons = [c[0] for c in detail["bounds_geojson"]["coordinates"][0]]
+    lats = [c[1] for c in detail["bounds_geojson"]["coordinates"][0]]
+    lon, lat = sum(lons) / len(lons), sum(lats) / len(lats)
+    n = 2**z
+    x = int((lon + 180) / 360 * n)
+    y = int((1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * n)
+    url = detail["tiles_url"].format(z=z, x=x, y=y)
+    tile = client.get(url, headers=headers)
+    assert tile.status_code == 200 and tile.headers["content-type"] == "image/png"
+    assert Image.open(io.BytesIO(tile.content)).convert("RGBA").getchannel("A").getextrema()[1] == 255
+    empty = client.get(detail["tiles_url"].format(z=z, x=0, y=0), headers=headers)
+    assert empty.status_code == 200
+    assert Image.open(io.BytesIO(empty.content)).getchannel("A").getextrema() == (0, 0)
+    outsider = _auth_headers(client, email="spy@example.com", org="Spy Org")
+    assert client.get(url, headers=outsider).status_code == 404

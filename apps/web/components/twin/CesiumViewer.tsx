@@ -46,6 +46,7 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   SingleTileImageryProvider,
+  UrlTemplateImageryProvider,
   Transforms,
   VerticalOrigin,
   Viewer,
@@ -527,10 +528,16 @@ export default function CesiumViewer({
           const coords = (detail.bounds_geojson as { coordinates: number[][][] }).coordinates[0];
           const lons = coords.map((c) => c[0]);
           const lats = coords.map((c) => c[1]);
-          const url = await twinApi.mapLayerImage(layer.id);
-          const provider = await SingleTileImageryProvider.fromUrl(url, {
-            rectangle: Rectangle.fromDegrees(Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)),
-          });
+          const rectangle = Rectangle.fromDegrees(Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats));
+          // Full-resolution XYZ pyramid when available; older layers have only the preview image.
+          const provider = detail.tiles_url
+            ? new UrlTemplateImageryProvider({
+                url: new Resource({ url: absoluteUrl(detail.tiles_url), headers: authHeaders() }),
+                rectangle,
+                minimumLevel: detail.min_zoom ?? 0,
+                maximumLevel: detail.max_zoom ?? 22,
+              })
+            : await SingleTileImageryProvider.fromUrl(await twinApi.mapLayerImage(layer.id), { rectangle });
           const il = viewer.imageryLayers.addImageryProvider(provider);
           il.alpha = 0.85;
           il.show = useTwinStore.getState().mapLayerVisible[layer.id] ?? true;

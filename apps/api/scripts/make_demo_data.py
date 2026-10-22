@@ -225,6 +225,46 @@ def make_site_geojson() -> bytes:
     return json.dumps(gj, ensure_ascii=False).encode()
 
 
+def make_ortho(gsd: float = 0.05) -> bytes:
+    """Synthetic drone orthophoto (GeoTIFF, EPSG:32642, 5 cm): soil, access
+    road, the building footprint and a material yard. Large enough that the
+    3D view needs the XYZ pyramid to show it at full resolution."""
+    import rasterio
+    from rasterio.io import MemoryFile
+    from rasterio.transform import from_origin
+
+    lx, ly = BAYS_X * SPAN, BAYS_Y * SPAN
+    x0, y1 = E0 - 50, N0 + ly + 50
+    w, h = int((lx + 100) / gsd), int((ly + 100) / gsd)
+    rng = np.random.default_rng(7)
+    xs = x0 + (np.arange(w) + 0.5) * gsd
+    ys = y1 - (np.arange(h) + 0.5) * gsd
+    X, Y = np.meshgrid(xs, ys)
+    noise = rng.normal(0, 9, (h, w))
+    img = np.empty((3, h, w), np.float32)
+    img[0], img[1], img[2] = 150 + noise, 128 + noise, 96 + noise  # soil
+    tracks = (np.abs(np.sin((X - E0) * 0.9)) < 0.08) & (Y < N0 - 3)
+    img[:, tracks] -= 25  # machinery tracks
+    road = (Y > N0 - 14) & (Y < N0 - 8)
+    img[:, road] = np.array([95, 95, 98])[:, None] + noise[road] * 0.4  # asphalt
+    yard = (X > E0 + lx + 8) & (X < E0 + lx + 30) & (Y > N0) & (Y < N0 + 18)
+    img[:, yard] = np.array([170, 170, 165])[:, None] + noise[yard] * 0.5
+    pallets = yard & (np.mod(X - E0, 3.0) < 1.2) & (np.mod(Y - N0, 2.5) < 1.0)
+    img[:, pallets] = np.array([176, 132, 70])[:, None]
+    roof = (X > E0) & (X < E0 + lx) & (Y > N0) & (Y < N0 + ly)
+    img[:, roof] = np.array([182, 184, 188])[:, None] + noise[roof] * 0.3  # slab
+    grid = roof & ((np.mod(X - E0, SPAN) < 0.3) | (np.mod(Y - N0, SPAN) < 0.3))
+    img[:, grid] -= 30
+    data = np.clip(img, 0, 255).astype(np.uint8)
+    profile = {"driver": "GTiff", "width": w, "height": h, "count": 3, "dtype": "uint8", "crs": "EPSG:32642",
+               "transform": from_origin(x0, y1, gsd, gsd), "compress": "deflate", "tiled": True,
+               "photometric": "RGB"}
+    with MemoryFile() as mem:
+        with mem.open(**profile) as ds:
+            ds.write(data)
+        return mem.read()
+
+
 DEMO_TASKS = [  # (name, IFC classes linked in the demo)
     ("Каркас: колонны и плита", ("IfcColumn", "IfcSlab")),
     ("Наружные стены", ("IfcWall",)),
@@ -271,6 +311,7 @@ def main(out: str) -> None:
         ("demo_scan.laz", make_scan()),
         ("demo_site.geojson", make_site_geojson()),
         ("demo_schedule.xml", make_schedule_xml()),
+        ("demo_ortho.tif", make_ortho()),
     ]:
         with open(os.path.join(out, name), "wb") as fh:
             fh.write(data)

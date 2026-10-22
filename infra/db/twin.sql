@@ -260,3 +260,6 @@ ALTER TABLE document_versions ADD COLUMN IF NOT EXISTS text_content TEXT;
 ALTER TABLE document_versions ADD COLUMN IF NOT EXISTS text_status TEXT NOT NULL DEFAULT 'pending';
 CREATE INDEX IF NOT EXISTS idx_document_versions_fts
   ON document_versions USING GIN (to_tsvector('russian', coalesce(text_content, '')));
+
+-- Raster map layers: XYZ tile pyramid metadata (prefix, zoom range, bounds).
+ALTER TABLE map_layers ADD COLUMN IF NOT EXISTS tiles JSONB;

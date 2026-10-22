@@ -167,6 +167,10 @@ export interface MapLayerVectorDetail extends MapLayerSummary {
 export interface MapLayerRasterDetail extends MapLayerSummary {
   layer_kind: 'raster';
   image_url: string;
+  /** XYZ pyramid template ({z}/{x}/{y}); absent for layers imported before tiling. */
+  tiles_url?: string | null;
+  min_zoom?: number | null;
+  max_zoom?: number | null;
 }
 
 export type MapLayerDetail = MapLayerVectorDetail | MapLayerRasterDetail;

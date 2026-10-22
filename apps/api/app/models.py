@@ -268,6 +268,8 @@ class MapLayer(Base):
     bounds_geojson: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     storage_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     geojson: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Raster XYZ pyramid: {prefix, min_zoom, max_zoom, bounds, tile_count, ...}
+    tiles: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

@@ -254,6 +254,10 @@ class MapLayerVectorDetail(MapLayerSummary):
 
 class MapLayerRasterDetail(MapLayerSummary):
     image_url: str
+    # XYZ pyramid (absent for layers imported before tiling existed).
+    tiles_url: str | None = None  # template with {z}/{x}/{y}
+    min_zoom: int | None = None
+    max_zoom: int | None = None
 
 
 # ---------- Formations ----------

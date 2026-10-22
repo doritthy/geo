@@ -57,6 +57,7 @@ def main() -> None:
     v2 = upload("demo_building_v2.ifc", "bim", {"name": "Корпус А — АР/КР", "replaces_asset_id": v1, "captured_at": "2026-06-01"})
     scan = upload("demo_scan.laz", "point_cloud", {"name": "Лазерное сканирование", "captured_at": "2026-05-20"})
     upload("demo_site.geojson", "map_vector", {})
+    upload("demo_ortho.tif", "map_raster", {"name": "Ортофотоплан 20.05.2026"})
 
     center = c.get(f"/api/assets/{v2}", headers=h).json()["stats"]["center"]
     c.post(f"/api/projects/{pid}/annotations", headers=h, json={
