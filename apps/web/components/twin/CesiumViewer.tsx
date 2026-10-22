@@ -770,6 +770,15 @@ export default function CesiumViewer({
           ],
         });
         if (final) label(pts[1], `Δh ${r.dh.toFixed(3)} м`);
+      } else if (currentTool === 'profile' && pts.length === 2) {
+        const r = polylineLength(pts);
+        set({ tool: currentTool, lines: [{ label: 'Длина разреза', value: fmtLength(r.horizontal) }] });
+        if (final) {
+          const a = toLonLatH(pts[0]);
+          const b = toLonLatH(pts[1]);
+          store().setProfileLine({ a: [a.lon, a.lat], b: [b.lon, b.lat] });
+          label(pts[1], 'Разрез');
+        }
       } else if (currentTool === 'angle' && pts.length === 3) {
         const a = angleAt(pts[0], pts[1], pts[2]);
         set({ tool: currentTool, lines: [{ label: 'Угол', value: `${a.toFixed(2)}°` }] });
@@ -879,7 +888,7 @@ export default function CesiumViewer({
       ts.points.push(p);
       addPoint(p);
       report(currentTool, ts.points, false);
-      const maxPoints = currentTool === 'height' ? 2 : currentTool === 'angle' ? 3 : Infinity;
+      const maxPoints = currentTool === 'height' || currentTool === 'profile' ? 2 : currentTool === 'angle' ? 3 : Infinity;
       if (ts.points.length >= maxPoints) finish();
     }, ScreenSpaceEventType.LEFT_CLICK);
 

@@ -143,3 +143,42 @@ def report(analysis_id: uuid.UUID, db: Session = Depends(get_db), user: User = D
     name = f"Отклонения_{a.created_at:%Y-%m-%d}.pdf"
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
+
+
+class ProfileRequest(BaseModel):
+    a: list[float] = Field(min_length=2, max_length=2)  # [lon, lat]
+    b: list[float] = Field(min_length=2, max_length=2)
+    bim_asset_id: uuid.UUID | None = None
+    cloud_asset_id: uuid.UUID | None = None
+    width: float = Field(default=0.3, gt=0, le=10)
+
+
+@router.post("/api/projects/{project_id}/profile")
+def profile(payload: ProfileRequest, project: Project = Depends(project_viewer), db: Session = Depends(get_db)) -> dict:
+    """Vertical section A→B: BIM cut lines + scan points in a corridor, in
+    (distance m, ellipsoidal height m)."""
+    from app.twin.analysis_jobs import load_mesh_world, load_points_world
+    from app.twin.georef import llh_to_ecef
+    from app.twin.profile import corridor_points, frame_at, section_segments
+
+    origin, axes = frame_at(*payload.a)
+    b_local = (llh_to_ecef(payload.b[0], payload.b[1], 0.0) - origin) @ axes.T
+    a2, b2 = np.zeros(2), b_local[:2]
+    out: dict = {"length": float(np.linalg.norm(b2)), "bim": [], "scan": []}
+
+    def asset(aid, kind):
+        a = db.get(SceneAsset, aid)
+        if a is None or a.project_id != project.id or a.kind != kind:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
+        return a
+
+    if payload.bim_asset_id:
+        _, tris = load_mesh_world(asset(payload.bim_asset_id, "bim"))
+        local = ((tris.reshape(-1, 3) - origin) @ axes.T).reshape(-1, 3, 3)
+        # ENU z at the origin is height above the ellipsoid there (curvature < 1 mm over 100 m).
+        out["bim"] = section_segments(local, a2, b2)
+    if payload.cloud_asset_id:
+        pts, _, _ = load_points_world(asset(payload.cloud_asset_id, "point_cloud"), max_points=3_000_000)
+        out["scan"] = corridor_points((pts - origin) @ axes.T, a2, b2, payload.width)
+    return out
+

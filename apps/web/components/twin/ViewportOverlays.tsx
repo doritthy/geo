@@ -15,6 +15,7 @@ const TOOLS: { key: ToolMode; title: string; icon: JSX.Element }[] = [
   { key: 'height', title: 'Перепад высот', icon: Icons.height },
   { key: 'angle', title: 'Угол (3 точки)', icon: Icons.angle },
   { key: 'volume', title: 'Объём (насыпь / выемка)', icon: Icons.volume },
+  { key: 'profile', title: 'Профиль-разрез: BIM против скана', icon: Icons.profile },
   { key: 'annotate', title: 'Добавить метку', icon: Icons.annotate },
   { key: 'issue', title: 'Новое предписание в точке', icon: Icons.issue },
 ];
@@ -52,6 +53,7 @@ const TOOL_HINTS: Partial<Record<ToolMode, string>> = {
   volume: 'Обведите контур объёма; база — средняя отметка контура',
   annotate: 'Кликните место для метки',
   issue: 'Кликните место нарушения на модели',
+  profile: 'Укажите начало и конец линии разреза',
 };
 
 export function MeasurementCard() {

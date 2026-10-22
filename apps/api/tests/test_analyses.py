@@ -77,3 +77,19 @@ def test_deviation_rejects_wrong_kinds(client, scene):
     h, pid, bim, scan = scene
     r = client.post(f"/api/projects/{pid}/analyses/deviation", headers=h, json={"cloud_asset_id": bim, "bim_asset_id": scan})
     assert r.status_code == 400
+
+
+def test_profile_section(client, scene):
+    h, pid, bim, scan = scene
+    c = client.get(f"/api/assets/{bim}", headers=h).json()["stats"]["center"]
+    # East-west line through the building centre, ~50 m long.
+    a = [c["longitude"] - 0.00036, c["latitude"]]
+    b = [c["longitude"] + 0.00036, c["latitude"]]
+    r = client.post(f"/api/projects/{pid}/profile", headers=h,
+                    json={"a": a, "b": b, "bim_asset_id": bim, "cloud_asset_id": scan, "width": 0.5})
+    assert r.status_code == 200, r.text
+    p = r.json()
+    assert 45 < p["length"] < 55
+    assert len(p["bim"]) > 10 and len(p["scan"]) > 50
+    zs = [s[1] for s in p["bim"]] + [s[3] for s in p["bim"]]
+    assert max(zs) - min(zs) > 8  # three storeys cut

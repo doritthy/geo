@@ -10,7 +10,8 @@ export type ToolMode =
   | 'angle'
   | 'volume'
   | 'annotate'
-  | 'issue';
+  | 'issue'
+  | 'profile';
 
 export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'schedule' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
 
@@ -110,6 +111,9 @@ interface TwinState {
   openIssueId: string | null;
   setOpenIssueId: (id: string | null) => void;
 
+  profileLine: { a: [number, number]; b: [number, number] } | null;
+  setProfileLine: (p: TwinState['profileLine']) => void;
+
   /** Per-element colours (CSS) for one BIM asset, e.g. deviation classes. */
   elementColors: { assetId: string; colors: Record<string, string> } | null;
   setElementColors: (c: TwinState['elementColors']) => void;
@@ -203,6 +207,9 @@ export const useTwinStore = create<TwinState>((set) => ({
     set(pendingIssuePoint ? { pendingIssuePoint, panel: 'issues', panelOpen: true, tool: 'select' } : { pendingIssuePoint }),
   openIssueId: null,
   setOpenIssueId: (openIssueId) => set(openIssueId ? { openIssueId, panel: 'issues', panelOpen: true } : { openIssueId }),
+
+  profileLine: null,
+  setProfileLine: (profileLine) => set({ profileLine }),
 
   elementColors: null,
   setElementColors: (elementColors) => set({ elementColors }),

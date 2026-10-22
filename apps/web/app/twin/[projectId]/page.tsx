@@ -26,6 +26,7 @@ import PropertiesPanel from '@/components/twin/PropertiesPanel';
 import UploadDialog from '@/components/twin/UploadDialog';
 import { ClipPanel, MeasurementCard, TimelineBar, ToolPalette } from '@/components/twin/ViewportOverlays';
 import { Icons, IconButton } from '@/components/twin/ui';
+import ProfileChart from '@/components/twin/ProfileChart';
 
 const CesiumViewer = dynamic(() => import('@/components/twin/CesiumViewer'), {
   ssr: false,
@@ -231,6 +232,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
           <ToolPalette clipOpen={clipOpen} onToggleClip={() => setClipOpen(!clipOpen)} />
           {clipOpen ? <ClipPanel heightRange={heightRange} /> : <MeasurementCard />}
           <TimelineBar />
+          <ProfileChart />
           <PropertiesPanel />
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex justify-between gap-2 bg-gradient-to-t from-bg/90 to-transparent px-3 pb-1.5 pt-4 text-[11px] text-text-secondary">
             <span className="truncate">{cursor ?? ' '}</span>
