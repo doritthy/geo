@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     APS_BASE_URL: str = "https://developer.api.autodesk.com"
     PUBLIC_WEB_URL: str = "http://localhost:3000"
 
+    # Background jobs: "inline" (in the API process) or "queue" (jobs table + app.worker).
+    JOB_MODE: str = "inline"
+
     # Email notifications (optional). Without SMTP_HOST they are only logged.
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

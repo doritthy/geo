@@ -5,9 +5,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal, get_db
+from app.db import get_db
 from app.deps import get_project_scoped_or_404, project_editor, project_viewer
-from app.jobs import dispatch_parse
+from app.queue import enqueue
 from app.models import FileRecord as FileModel
 from app.models import Project, User
 from app.schemas import FileCategory
@@ -131,7 +131,7 @@ async def upload_file(
     file.file.seek(0)
     upload_fileobj(storage_key, file.file)
 
-    background_tasks.add_task(_run_parse_job, file_id)
+    enqueue("parse_file", {"file_id": str(file_id)}, background_tasks)
 
     return record
 
@@ -144,16 +144,6 @@ def _size_of(file: UploadFile) -> int:
     size = file.file.tell()
     file.file.seek(pos)
     return size
-
-
-def _run_parse_job(file_id: uuid.UUID) -> None:
-    # Runs in the BackgroundTask's own DB session (the request's session is
-    # already closed by the time this executes).
-    db = SessionLocal()
-    try:
-        dispatch_parse(file_id, db)
-    finally:
-        db.close()
 
 
 @router.get("/api/projects/{project_id}/files", response_model=list[FileSchema])

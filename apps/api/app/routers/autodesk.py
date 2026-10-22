@@ -20,6 +20,7 @@ from app.db import SessionLocal, get_db
 from app.deps import project_editor, project_viewer
 from app.integrations import autodesk_service as svc
 from app.integrations.aps import APSError
+from app.queue import enqueue
 from app.models import AutodeskConnection, AutodeskLink, Project, User
 from app.security import get_current_user
 
@@ -194,14 +195,6 @@ def _link_out(link: AutodeskLink) -> LinkOut:
     )
 
 
-def _run_import(link_id: uuid.UUID) -> None:
-    db = SessionLocal()
-    try:
-        svc.import_link(db, link_id)
-    finally:
-        db.close()
-
-
 @router.post("/projects/{project_id}/autodesk/imports", response_model=LinkOut, status_code=status.HTTP_201_CREATED)
 def create_import(
     payload: ImportRequest,
@@ -238,7 +231,7 @@ def create_import(
         except APSError:
             logger.exception("Could not register ACC webhook; import continues without auto-update")
 
-    background_tasks.add_task(_run_import, link.id)
+    enqueue("autodesk_import", {"link_id": str(link.id)}, background_tasks)
     return _link_out(link)
 
 
@@ -260,7 +253,7 @@ def sync_import(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     link.status = "pending"
     db.commit()
-    background_tasks.add_task(_run_import, link.id)
+    enqueue("autodesk_import", {"link_id": str(link.id)}, background_tasks)
     return _link_out(link)
 
 
@@ -302,7 +295,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks) -> dict:
             links = [link] if link and link.item_id == item_id else []
         for link in links:
             link.status = "pending"
-            background_tasks.add_task(_run_import, link.id)
+            enqueue("autodesk_import", {"link_id": str(link.id)}, background_tasks)
         db.commit()
         return {"queued": len(links)}
     finally:

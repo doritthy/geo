@@ -10,8 +10,9 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal, get_db
+from app.db import get_db
 from app.deps import _require_project_role, get_project_scoped_or_404, project_editor, project_viewer
+from app.queue import enqueue
 from app.models import Analysis, Project, SceneAsset, User
 from app.security import get_current_user
 from app.storage import delete_prefix, get_bytes
@@ -51,16 +52,6 @@ def _out(a: Analysis, full: bool = True) -> AnalysisOut:
                        result=result, result_asset_id=a.result_asset_id, created_at=a.created_at, finished_at=a.finished_at)
 
 
-def _run(analysis_id: uuid.UUID) -> None:
-    from app.twin.analysis_jobs import run_analysis
-
-    db = SessionLocal()
-    try:
-        run_analysis(db, analysis_id)
-    finally:
-        db.close()
-
-
 def _check_assets(db: Session, project: Project, cloud_id: uuid.UUID, bim_id: uuid.UUID) -> None:
     for aid, kind in ((cloud_id, "point_cloud"), (bim_id, "bim")):
         a = db.get(SceneAsset, aid)
@@ -76,7 +67,7 @@ def _create(db: Session, project: Project, user: User, kind: str, params: dict, 
     db.add(a)
     db.commit()
     db.refresh(a)
-    bg.add_task(_run, a.id)
+    enqueue("analysis", {"analysis_id": str(a.id)}, bg)
     return a
 
 

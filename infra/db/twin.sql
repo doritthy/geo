@@ -225,3 +225,18 @@ CREATE TABLE IF NOT EXISTS schedule_task_elements (
   PRIMARY KEY (task_id, version_group, global_id)
 );
 CREATE INDEX IF NOT EXISTS idx_task_elements_element ON schedule_task_elements(version_group, global_id);
+
+-- Durable background job queue (file conversion, analyses, ACC imports).
+-- Workers claim rows with SELECT ... FOR UPDATE SKIP LOCKED (python -m app.worker).
+CREATE TABLE IF NOT EXISTS jobs (
+  id BIGSERIAL PRIMARY KEY,
+  kind TEXT NOT NULL,                   -- parse_file | analysis | autodesk_import
+  payload JSONB NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'queued', -- queued | running | done | error
+  attempts INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  locked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_queued ON jobs(status, id);

@@ -28,6 +28,8 @@ apps/api/app/
                    crs.py, autodesk.py, analyses.py, issues.py, schedule.py, dashboard.py,
                    organization.py + старые геологические роутеры
   notify.py        email (SMTP; в тестах notify.outbox)
+  queue.py, worker.py  фоновые задачи: JOB_MODE=inline (BackgroundTasks) | queue (таблица jobs + воркер);
+                   новые фоновые работы — только через queue.enqueue(kind, payload, background_tasks)
   parsers/         vector_parser.py (GeoJSON/KML/DXF/GPKG) + геологические парсеры
   jobs.py          диспетчер фоновой обработки загрузок (twin-категории → twin/jobs.py)
 apps/api/scripts/make_demo_data.py   демо: здание IFC v1/v2 (IfcMapConversion, EPSG:32642), скан LAZ (плита 3 с прогибом 4 см),
