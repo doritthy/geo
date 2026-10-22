@@ -274,3 +274,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+
+-- Job priorities: lower runs first (interactive work before background indexing).
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 100;
+CREATE INDEX IF NOT EXISTS idx_jobs_priority ON jobs(status, priority, id);

@@ -29,3 +29,22 @@ def test_queue_mode(client, monkeypatch):
     with engine.connect() as conn:
         row = conn.exec_driver_sql("SELECT kind, status, attempts FROM jobs").one()
     assert tuple(row) == ("parse_file", "done", 1)
+
+
+def test_queue_priorities(client, monkeypatch):
+    from app import queue
+    from app.config import get_settings
+    from app.db import engine
+
+    monkeypatch.setattr(get_settings(), "JOB_MODE", "queue")
+    ran = []
+    for kind in ("document_text", "parse_file", "analysis"):
+        monkeypatch.setitem(queue.HANDLERS, kind, lambda p, k=kind: ran.append(k))
+    queue.enqueue("document_text", {})
+    queue.enqueue("parse_file", {})
+    queue.enqueue("analysis", {})
+    while queue.claim_and_run_one():
+        pass
+    assert ran == ["analysis", "parse_file", "document_text"]
+    with engine.connect() as conn:
+        assert conn.exec_driver_sql("SELECT count(*) FROM jobs WHERE status = 'done'").scalar() == 3

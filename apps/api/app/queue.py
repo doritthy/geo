@@ -73,6 +73,11 @@ HANDLERS: dict[str, Callable[[dict], None]] = {
 }
 
 
+# Lower runs first. Analyses are requested interactively and are usually
+# short; conversions follow; text indexing of documents can wait.
+PRIORITIES = {"analysis": 50, "parse_file": 100, "autodesk_import": 100, "document_text": 200}
+
+
 def enqueue(kind: str, payload: dict, background_tasks: BackgroundTasks | None = None) -> None:
     if kind not in HANDLERS:
         raise ValueError(f"Unknown job kind {kind}")
@@ -80,8 +85,8 @@ def enqueue(kind: str, payload: dict, background_tasks: BackgroundTasks | None =
         import json
 
         with engine.begin() as conn:
-            conn.execute(text("INSERT INTO jobs (kind, payload) VALUES (:k, CAST(:p AS JSONB))"),
-                         {"k": kind, "p": json.dumps(payload)})
+            conn.execute(text("INSERT INTO jobs (kind, payload, priority) VALUES (:k, CAST(:p AS JSONB), :pr)"),
+                         {"k": kind, "p": json.dumps(payload), "pr": PRIORITIES.get(kind, 100)})
         return
     if background_tasks is not None:
         background_tasks.add_task(HANDLERS[kind], payload)
@@ -100,7 +105,7 @@ def claim_and_run_one(stale_minutes: int = 120, max_attempts: int = 3) -> bool:
               SELECT id FROM jobs
               WHERE (status = 'queued')
                  OR (status = 'running' AND locked_at < now() - make_interval(mins => :stale) AND attempts < :max)
-              ORDER BY id
+              ORDER BY priority, id
               FOR UPDATE SKIP LOCKED
               LIMIT 1
             )
