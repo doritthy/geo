@@ -15,7 +15,8 @@ const TOOLS: { key: ToolMode; title: string; icon: JSX.Element }[] = [
   { key: 'height', title: 'Перепад высот', icon: Icons.height },
   { key: 'angle', title: 'Угол (3 точки)', icon: Icons.angle },
   { key: 'volume', title: 'Объём (насыпь / выемка)', icon: Icons.volume },
-  { key: 'annotate', title: 'Добавить метку / замечание', icon: Icons.annotate },
+  { key: 'annotate', title: 'Добавить метку', icon: Icons.annotate },
+  { key: 'issue', title: 'Новое предписание в точке', icon: Icons.issue },
 ];
 
 export function ToolPalette({ onToggleClip, clipOpen }: { onToggleClip: () => void; clipOpen: boolean }) {
@@ -50,6 +51,7 @@ const TOOL_HINTS: Partial<Record<ToolMode, string>> = {
   angle: 'Укажите три точки: начало, вершину, конец',
   volume: 'Обведите контур объёма; база — средняя отметка контура',
   annotate: 'Кликните место для метки',
+  issue: 'Кликните место нарушения на модели',
 };
 
 export function MeasurementCard() {

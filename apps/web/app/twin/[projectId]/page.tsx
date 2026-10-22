@@ -20,6 +20,7 @@ import ComparePanel from '@/components/twin/ComparePanel';
 import SettingsPanel from '@/components/twin/SettingsPanel';
 import AutodeskPanel from '@/components/twin/AutodeskPanel';
 import AnalysisPanel from '@/components/twin/AnalysisPanel';
+import IssuesPanel from '@/components/twin/IssuesPanel';
 import PropertiesPanel from '@/components/twin/PropertiesPanel';
 import UploadDialog from '@/components/twin/UploadDialog';
 import { ClipPanel, MeasurementCard, TimelineBar, ToolPalette } from '@/components/twin/ViewportOverlays';
@@ -33,7 +34,8 @@ const CesiumViewer = dynamic(() => import('@/components/twin/CesiumViewer'), {
 const PANELS: { key: SidePanel; title: string; icon: JSX.Element }[] = [
   { key: 'layers', title: 'Слои', icon: Icons.layers },
   { key: 'search', title: 'Поиск элементов', icon: Icons.search },
-  { key: 'annotations', title: 'Замечания', icon: Icons.annotate },
+  { key: 'issues', title: 'Предписания и замечания', icon: Icons.issue },
+  { key: 'annotations', title: 'Метки', icon: Icons.annotate },
   { key: 'documents', title: 'Документы ПД/РД', icon: Icons.docs },
   { key: 'compare', title: 'Сравнение версий', icon: Icons.compare },
   { key: 'analysis', title: 'План — факт: отклонения', icon: Icons.analysis },
@@ -77,13 +79,16 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
   const loadAnnotations = useCallback(() => twinApi.listAnnotations(projectId).then(setAnnotations), [projectId, setAnnotations]);
 
   useEffect(() => {
-    useTwinStore.setState({ assets: [], selection: null, compare: null, highlight: null, annotations: [] });
+    useTwinStore.setState({ assets: [], selection: null, compare: null, highlight: null, annotations: [], issues: [], openIssueId: null });
     twinApi
       .getProject(projectId)
       .then(setProject)
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Не удалось загрузить проект'));
     loadAssets().catch(() => {});
     loadAnnotations().catch(() => {});
+    twinApi.listIssues(projectId, { status: 'open,in_progress,review' }).then(useTwinStore.getState().setIssues).catch(() => {});
+    const issueParam = new URLSearchParams(window.location.search).get('issue');
+    if (issueParam) useTwinStore.getState().setOpenIssueId(issueParam);
   }, [projectId, loadAssets, loadAnnotations]);
 
   // Poll while conversions are running.
@@ -207,6 +212,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
               {panel === 'annotations' && <AnnotationsPanel projectId={projectId} onChanged={() => loadAnnotations()} />}
               {panel === 'documents' && <DocumentsPanel projectId={projectId} />}
               {panel === 'compare' && <ComparePanel />}
+              {panel === 'issues' && <IssuesPanel projectId={projectId} />}
               {panel === 'analysis' && <AnalysisPanel projectId={projectId} onAssetsChanged={loadAssets} />}
               {panel === 'autodesk' && <AutodeskPanel projectId={projectId} onImported={loadAssets} />}
               {panel === 'settings' && <SettingsPanel project={project} onSaved={setProject} />}

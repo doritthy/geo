@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Annotation, BimElementSummary, CompareResult, SceneAsset } from './types';
+import type { Annotation, BimElementSummary, CompareResult, Issue, SceneAsset } from './types';
 
 export type ToolMode =
   | 'select'
@@ -9,12 +9,14 @@ export type ToolMode =
   | 'height'
   | 'angle'
   | 'volume'
-  | 'annotate';
+  | 'annotate'
+  | 'issue';
 
-export type SidePanel = 'layers' | 'search' | 'annotations' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
+export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
 
 export interface Selection {
-  kind: 'element' | 'feature' | 'annotation';
+  kind: 'element' | 'feature' | 'annotation' | 'issue';
+  issueId?: string;
   assetId?: string;
   globalId?: string;
   title?: string;
@@ -91,6 +93,7 @@ interface TwinState {
     globalId?: string;
     bbox?: { min: number[]; max: number[] };
     annotationId?: string;
+    issueId?: string;
     point?: { longitude: number; latitude: number; height: number };
     nonce: number;
   } | null;
@@ -98,6 +101,14 @@ interface TwinState {
 
   highlight: BimElementSummary[] | null;
   setHighlight: (h: BimElementSummary[] | null) => void;
+
+  issues: Issue[];
+  setIssues: (i: Issue[]) => void;
+  /** Point picked with the 'issue' tool, consumed by the issues panel. */
+  pendingIssuePoint: { longitude: number; latitude: number; height: number; assetId?: string; globalId?: string } | null;
+  setPendingIssuePoint: (p: TwinState['pendingIssuePoint']) => void;
+  openIssueId: string | null;
+  setOpenIssueId: (id: string | null) => void;
 
   /** Per-element colours (CSS) for one BIM asset, e.g. deviation classes. */
   elementColors: { assetId: string; colors: Record<string, string> } | null;
@@ -184,6 +195,14 @@ export const useTwinStore = create<TwinState>((set) => ({
 
   highlight: null,
   setHighlight: (highlight) => set({ highlight }),
+
+  issues: [],
+  setIssues: (issues) => set({ issues }),
+  pendingIssuePoint: null,
+  setPendingIssuePoint: (pendingIssuePoint) =>
+    set(pendingIssuePoint ? { pendingIssuePoint, panel: 'issues', panelOpen: true, tool: 'select' } : { pendingIssuePoint }),
+  openIssueId: null,
+  setOpenIssueId: (openIssueId) => set(openIssueId ? { openIssueId, panel: 'issues', panelOpen: true } : { openIssueId }),
 
   elementColors: null,
   setElementColors: (elementColors) => set({ elementColors }),

@@ -15,6 +15,9 @@ import type {
   DocumentSummary,
   ElementPage,
   Analysis,
+  Issue,
+  IssueDetail,
+  Member,
   SceneAsset,
   SceneAssetUpdate,
   TwinProject,
@@ -153,6 +156,38 @@ export const twinApi = {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Отчёт_отклонения.pdf';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
+  members: (projectId: string) => request<Member[]>(`/api/projects/${projectId}/members`),
+  listIssues: (projectId: string, p: { status?: string; assignee?: string; kind?: string; overdue?: boolean; q?: string } = {}) =>
+    request<Issue[]>(`/api/projects/${projectId}/issues${qs({ ...p, overdue: p.overdue ? 'true' : undefined })}`),
+  getIssue: (id: string) => request<IssueDetail>(`/api/issues/${id}`),
+  createIssue: (projectId: string, body: Record<string, unknown>) =>
+    request<IssueDetail>(`/api/projects/${projectId}/issues`, { method: 'POST', body: JSON.stringify(body) }),
+  updateIssue: (id: string, body: Record<string, unknown>) =>
+    request<IssueDetail>(`/api/issues/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  commentIssue: (id: string, text: string) =>
+    request<IssueDetail>(`/api/issues/${id}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
+  attachToIssue: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<IssueDetail>(`/api/issues/${id}/attachments`, { method: 'POST', body: form });
+  },
+  deleteIssue: (id: string) => request<void>(`/api/issues/${id}`, { method: 'DELETE' }),
+  async attachmentUrl(id: string): Promise<string> {
+    const res = await fetch(absoluteUrl(`/api/issue-attachments/${id}`), { headers: authHeaders() });
+    if (!res.ok) throw new ApiError(res.status, 'Файл недоступен');
+    return URL.createObjectURL(await res.blob());
+  },
+  async downloadIssues(projectId: string, format: 'xlsx' | 'pdf', p: Record<string, string | undefined>) {
+    const res = await fetch(absoluteUrl(`/api/projects/${projectId}/issues/export.${format}${qs(p)}`), { headers: authHeaders() });
+    if (!res.ok) throw new ApiError(res.status, 'Экспорт не удался');
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Предписания.${format}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },

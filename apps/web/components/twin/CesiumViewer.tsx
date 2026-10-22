@@ -29,6 +29,7 @@ import {
   EllipsoidTerrainProvider,
   Entity,
   GeoJsonDataSource,
+  HeightReference,
   HeadingPitchRange,
 
   ImageryLayer,
@@ -167,6 +168,7 @@ export default function CesiumViewer({
   const tilesetsRef = useRef<Map<string, TilesetEntry>>(new Map());
   const measureRef = useRef<CustomDataSource | null>(null);
   const notesRef = useRef<CustomDataSource | null>(null);
+  const issuesRef = useRef<CustomDataSource | null>(null);
   const mapSourcesRef = useRef<Map<string, GeoJsonDataSource | ImageryLayer>>(new Map());
   const crsRef = useRef(crs);
   crsRef.current = crs;
@@ -187,6 +189,7 @@ export default function CesiumViewer({
   const elementColors = useTwinStore((s) => s.elementColors);
   const tool = useTwinStore((s) => s.tool);
   const annotations = useTwinStore((s) => s.annotations);
+  const issues = useTwinStore((s) => s.issues);
   const timelineEnabled = useTwinStore((s) => s.timelineEnabled);
   const timelineDate = useTwinStore((s) => s.timelineDate);
   const planView = useTwinStore((s) => s.planView);
@@ -230,8 +233,11 @@ export default function CesiumViewer({
 
     const measure = new CustomDataSource('measure');
     const notes = new CustomDataSource('notes');
+    const issueSource = new CustomDataSource('issues');
     viewer.dataSources.add(measure);
     viewer.dataSources.add(notes);
+    viewer.dataSources.add(issueSource);
+    issuesRef.current = issueSource;
     measureRef.current = measure;
     notesRef.current = notes;
     viewerRef.current = viewer;
@@ -570,6 +576,41 @@ export default function CesiumViewer({
     }
   }, [annotations]);
 
+  // ---------- issues (предписания) ----------
+  useEffect(() => {
+    const src = issuesRef.current;
+    if (!src) return;
+    src.entities.removeAll();
+    const statusColor: Record<string, string> = { open: '#EF4444', in_progress: '#F59E0B', review: '#3B82F6', closed: '#22C55E' };
+    for (const i of issues) {
+      if (i.longitude === null || i.latitude === null) continue;
+      src.entities.add(
+        new Entity({
+          id: `issue:${i.id}`,
+          position: Cartesian3.fromDegrees(i.longitude, i.latitude, i.height ?? 0),
+          billboard: {
+            image: makePin(statusColor[i.status] ?? '#EF4444'),
+            verticalOrigin: VerticalOrigin.BOTTOM,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            scaleByDistance: new NearFarScalar(50, 1.0, 5000, 0.5),
+            heightReference: i.height === null ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+          },
+          label: {
+            text: `№${i.number}`,
+            font: 'bold 12px sans-serif',
+            fillColor: Color.WHITE,
+            outlineColor: Color.fromCssColorString('#0B0F19'),
+            outlineWidth: 3,
+            style: LabelStyle.FILL_AND_OUTLINE,
+            pixelOffset: new Cartesian2(0, -44),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            heightReference: i.height === null ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+          },
+        })
+      );
+    }
+  }, [issues]);
+
   // ---------- fly to ----------
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -580,6 +621,11 @@ export default function CesiumViewer({
         duration: 1.2,
         offset: new HeadingPitchRange(0.5, -0.5, 25),
       });
+      return;
+    }
+    if (flyTo.issueId) {
+      const ent = issuesRef.current?.entities.getById(`issue:${flyTo.issueId}`);
+      if (ent) viewer.flyTo(ent, { duration: 1.2, offset: new HeadingPitchRange(0, -0.6, 40) });
       return;
     }
     if (flyTo.annotationId) {
@@ -768,7 +814,7 @@ export default function CesiumViewer({
     handler.setInputAction((e: { position: Cartesian2 }) => {
       const currentTool = store().tool;
 
-      if (currentTool === 'select' || currentTool === 'annotate') {
+      if (currentTool === 'select' || currentTool === 'annotate' || currentTool === 'issue') {
         const picked = viewer.scene.pick(e.position);
         const position = pick(e.position);
         let assetId: string | undefined;
@@ -777,14 +823,18 @@ export default function CesiumViewer({
           for (const [id, entry] of tilesetsRef.current) if (entry.tileset === picked.tileset) assetId = id;
           globalId = picked.getProperty('GlobalId') as string | undefined;
         }
-        if (currentTool === 'annotate') {
+        if (currentTool === 'annotate' || currentTool === 'issue') {
           if (!position) return;
           const llh = toLonLatH(position);
-          store().setPendingAnnotation({ longitude: llh.lon, latitude: llh.lat, height: llh.h, assetId, globalId });
+          const point = { longitude: llh.lon, latitude: llh.lat, height: llh.h, assetId, globalId };
+          if (currentTool === 'issue') store().setPendingIssuePoint(point);
+          else store().setPendingAnnotation(point);
           return;
         }
         if (globalId && assetId) {
           store().setSelection({ kind: 'element', assetId, globalId, title: picked.getProperty('Name') as string });
+        } else if (picked?.id instanceof Entity && String(picked.id.id).startsWith('issue:')) {
+          store().setOpenIssueId(String(picked.id.id).slice(6));
         } else if (picked?.id instanceof Entity && String(picked.id.id).startsWith('note:')) {
           store().setSelection({ kind: 'annotation', annotationId: String(picked.id.id).slice(5) });
         } else if (picked?.id instanceof Entity && picked.id.properties) {

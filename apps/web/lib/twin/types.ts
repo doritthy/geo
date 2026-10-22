@@ -246,3 +246,74 @@ export interface Analysis {
   created_at: string;
   finished_at: string | null;
 }
+
+export type IssueStatus = 'open' | 'in_progress' | 'review' | 'closed';
+export type IssuePriority = 'low' | 'normal' | 'high' | 'critical';
+export type IssueKind = 'remark' | 'prescription';
+
+export interface Issue {
+  id: string;
+  number: number;
+  kind: IssueKind;
+  title: string;
+  description: string | null;
+  status: IssueStatus;
+  priority: IssuePriority;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  due_date: string | null;
+  overdue: boolean;
+  longitude: number | null;
+  latitude: number | null;
+  height: number | null;
+  asset_id: string | null;
+  element_global_id: string | null;
+  created_by: string | null;
+  author_name: string | null;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  attachments_count: number;
+}
+
+export interface IssueDetail extends Issue {
+  attachments: {
+    id: string;
+    filename: string;
+    content_type: string | null;
+    size_bytes: number;
+    longitude: number | null;
+    latitude: number | null;
+    taken_at: string | null;
+    created_at: string;
+  }[];
+  events: { id: number; kind: string; data: Record<string, unknown>; user_name: string | null; created_at: string }[];
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export const ISSUE_STATUS: Record<IssueStatus, { label: string; color: string }> = {
+  open: { label: 'Открыто', color: '#EF4444' },
+  in_progress: { label: 'В работе', color: '#F59E0B' },
+  review: { label: 'На проверке', color: '#3B82F6' },
+  closed: { label: 'Закрыто', color: '#22C55E' },
+};
+
+export const ISSUE_NEXT: Record<IssueStatus, { to: IssueStatus; label: string }[]> = {
+  open: [{ to: 'in_progress', label: 'Взять в работу' }, { to: 'closed', label: 'Закрыть' }],
+  in_progress: [{ to: 'review', label: 'На проверку' }, { to: 'open', label: 'Вернуть' }],
+  review: [{ to: 'closed', label: 'Принять и закрыть' }, { to: 'in_progress', label: 'Вернуть в работу' }],
+  closed: [{ to: 'open', label: 'Переоткрыть' }],
+};
+
+export const PRIORITY_LABELS: Record<IssuePriority, string> = {
+  low: 'Низкий',
+  normal: 'Обычный',
+  high: 'Высокий',
+  critical: 'Критический',
+};
