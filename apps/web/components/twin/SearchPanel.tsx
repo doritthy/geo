@@ -81,7 +81,7 @@ export default function SearchPanel() {
         </Select>
       </div>
       <div className="flex items-center justify-between text-xs text-text-muted">
-        <span>{loading ? tr('Поиск…') : `Найдено: ${total}${total > items.length ? ` (показано ${items.length})` : ''}`}</span>
+        <span>{loading ? tr('Поиск…') : `${tr('Найдено')}: ${total}${total > items.length ? ` (${tr('показано')} ${items.length})` : ''}`}</span>
         {highlight ? (
           <Button variant="ghost" onClick={() => setHighlight(null)}>{tr('Снять подсветку')}</Button>
         ) : (

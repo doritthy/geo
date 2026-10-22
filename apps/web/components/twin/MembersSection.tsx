@@ -54,7 +54,7 @@ export default function MembersSection({ projectId }: { projectId: string }) {
   function createUser(e: FormEvent) {
     e.preventDefault();
     run(() => request('/api/organization/users', { method: 'POST', body: JSON.stringify({ ...nu, full_name: nu.full_name || null }) }),
-      `Пользователь ${nu.email} создан — сообщите ему пароль`).then(() => setNu({ email: '', full_name: '', password: '', role: 'geologist' }));
+      tr('Пользователь {e} создан — сообщите ему пароль', { e: nu.email })).then(() => setNu({ email: '', full_name: '', password: '', role: 'geologist' }));
   }
 
   const notMembers = users.filter((u) => !members.some((m) => m.user_id === u.id));

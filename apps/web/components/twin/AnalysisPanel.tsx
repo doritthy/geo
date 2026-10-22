@@ -6,7 +6,7 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import type { Analysis, DeviationElement } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Input, Select } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 const BIN_COLORS = ['#1e40af', '#3b82f6', '#93c5fd', '#22c55e', '#facc15', '#f97316', '#dc2626'];
 
@@ -66,14 +66,14 @@ function DeviationResult({ a, onChanged }: { a: Analysis; onChanged: () => void 
       {hist && (
         <>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-            <span className="text-text-secondary">В допуске ±{tol[1] * 100} см</span>
+            <span className="text-text-secondary">{tr('В допуске ±{tol} см', { tol: tol[1] * 100 })}</span>
             <span className="text-right font-semibold text-text-primary">{(hist.within_tolerance * 100).toFixed(1)} %</span>
             <span className="text-text-secondary">{tr('Среднее / RMS')}</span>
             <span className="text-right">{mm(hist.mean)} / {mm(hist.rms)}</span>
             <span className="text-text-secondary">95% |d|</span>
             <span className="text-right">{mm(hist.p95_abs)}</span>
             <span className="text-text-secondary">{tr('Точек (модель / вне)')}</span>
-            <span className="text-right">{hist.related_points.toLocaleString('ru-RU')} / {hist.unrelated_points.toLocaleString('ru-RU')}</span>
+            <span className="text-right">{hist.related_points.toLocaleString(locale())} / {hist.unrelated_points.toLocaleString(locale())}</span>
           </div>
           <div className="space-y-0.5">
             {hist.bins.map((b) => (
@@ -207,7 +207,7 @@ export default function AnalysisPanel({ projectId, onAssetsChanged }: { projectI
           <Select value={cloudId} onChange={(e) => setCloudId(e.target.value)}>
             {clouds.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}{c.captured_at ? ` · ${new Date(c.captured_at).toLocaleDateString('ru-RU')}` : ''}
+                {c.name}{c.captured_at ? ` · ${new Date(c.captured_at).toLocaleDateString(locale())}` : ''}
               </option>
             ))}
           </Select>
@@ -262,7 +262,7 @@ export default function AnalysisPanel({ projectId, onAssetsChanged }: { projectI
               </div>
               <div className="truncate text-[11px] text-text-muted">
                 {a.result.cloud?.name ?? ''} ↔ {a.result.bim ? `${a.result.bim.name} v${a.result.bim.version}` : ''} ·{' '}
-                {new Date(a.created_at).toLocaleString('ru-RU')}
+                {new Date(a.created_at).toLocaleString(locale())}
               </div>
             </button>
             {open === a.id && (

@@ -141,7 +141,7 @@ export default function UploadDialog({
               <Select value={replaces} onChange={(e) => setReplaces(e.target.value)}>
                 <option value="">{tr('Новая модель')}</option>
                 {bimGroups.map((a) => (
-                  <option key={a.id} value={a.id}>Новая версия: {a.name} (сейчас v{a.version})</option>
+                  <option key={a.id} value={a.id}>{tr('Новая версия: {n} (сейчас v{v})', { n: a.name, v: a.version })}</option>
                 ))}
               </Select>
             </Field>
@@ -196,7 +196,7 @@ export default function UploadDialog({
                 <div className="h-full bg-accent-teal transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
               </div>
               <div className="mt-1 text-[11px] text-text-muted">
-                {progress < 1 ? `Передача ${Math.round(progress * 100)}%` : tr('Файл получен, запускается обработка…')}
+                {progress < 1 ? `${tr('Передача')} ${Math.round(progress * 100)}%` : tr('Файл получен, запускается обработка…')}
               </div>
             </div>
           )}

@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import { useTwinStore, type ToolMode } from '@/lib/twin/store';
 import { Icons, IconButton } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 const TOOLS: { key: ToolMode; title: string; icon: JSX.Element }[] = [
   { key: 'select', title: tr('Выбор элемента'), icon: Icons.select },
@@ -96,7 +96,7 @@ export function ClipPanel({ heightRange }: { heightRange: [number, number] }) {
             onChange={(e) => setClip({ height: Number(e.target.value) })}
             className="w-full"
           />
-          <div className="text-text-muted">Отметка: {clip.height.toFixed(2)} м</div>
+          <div className="text-text-muted">{tr('Отметка')}: {clip.height.toFixed(2)} м</div>
         </div>
       )}
       <label className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export function ClipPanel({ heightRange }: { heightRange: [number, number] }) {
         <div className="space-y-2">
           <div>
             <input type="range" min={0} max={359} value={clip.heading} onChange={(e) => setClip({ heading: Number(e.target.value) })} className="w-full" />
-            <div className="text-text-muted">Направление: {clip.heading}°</div>
+            <div className="text-text-muted">{tr('Направление')}: {clip.heading}°</div>
           </div>
           <div>
             <input
@@ -119,7 +119,7 @@ export function ClipPanel({ heightRange }: { heightRange: [number, number] }) {
               onChange={(e) => setClip({ offset: Number(e.target.value) })}
               className="w-full"
             />
-            <div className="text-text-muted">Смещение: {clip.offset.toFixed(1)} м</div>
+            <div className="text-text-muted">{tr('Смещение')}: {clip.offset.toFixed(1)} м</div>
           </div>
         </div>
       )}
@@ -161,13 +161,13 @@ export function TimelineBar() {
           className="flex-1"
         />
         <span className="w-24 text-right text-text-primary">
-          {enabled ? new Date(dates[idx]).toLocaleDateString('ru-RU') : tr('все съёмки')}
+          {enabled ? new Date(dates[idx]).toLocaleDateString(locale()) : tr('все съёмки')}
         </span>
       </div>
       {enabled && (
         <div className="mt-1 flex justify-between text-[10px] text-text-muted">
           {dates.map((d) => (
-            <span key={d}>{new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+            <span key={d}>{new Date(d).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' })}</span>
           ))}
         </div>
       )}

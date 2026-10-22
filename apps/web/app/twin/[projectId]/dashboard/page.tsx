@@ -8,7 +8,7 @@ import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import { request, ApiError } from '@/lib/api';
 import { ISSUE_STATUS, type IssueStatus, type ScheduleMetrics } from '@/lib/twin/types';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 interface Dashboard {
   project: { id: string; name: string; description: string | null };
@@ -37,7 +37,7 @@ interface Dashboard {
 }
 
 const n0 = (v: number) => (Math.round(v) === 0 ? '0' : v.toFixed(0)); // no "-0"
-const d = (s?: string | null) => (s ? new Date(s).toLocaleDateString('ru-RU') : '—');
+const d = (s?: string | null) => (s ? new Date(s).toLocaleDateString(locale()) : '—');
 
 function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'bad' | 'good' }) {
   return (
@@ -81,20 +81,20 @@ function DashboardInner({ projectId }: { projectId: string }) {
     <div className="min-h-screen bg-bg">
       <header className="flex items-center gap-3 border-b border-bg-border bg-bg-panel px-4 py-3">
         <Link href={`/twin/${projectId}`} className="text-sm text-accent-teal hover:underline">{tr('← К 3D-сцене')}</Link>
-        <h1 className="truncate text-base font-semibold">{data.project.name} — дашборд</h1>
+        <h1 className="truncate text-base font-semibold">{data.project.name} — {tr('дашборд')}</h1>
         <button onClick={() => window.print()} className="ml-auto rounded-md border border-bg-border px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary">
           {tr('Печать / PDF')}
         </button>
       </header>
       <main className="mx-auto max-w-6xl space-y-4 p-4">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Tile label={tr('Выполнение (факт / план)')} value={s ? `${s.actual_percent?.toFixed(0)}%` : '—'} sub={s ? `план ${s.planned_percent?.toFixed(0)}%` : tr('график не загружен')} />
+          <Tile label={tr('Выполнение (факт / план)')} value={s ? `${s.actual_percent?.toFixed(0)}%` : '—'} sub={s ? `${tr('план')} ${s.planned_percent?.toFixed(0)}%` : tr('график не загружен')} />
           <Tile label={tr('Индекс сроков SPI')} value={s?.spi ? s.spi.toFixed(2) : '—'} sub={s?.spi ? (s.spi < 0.95 ? tr('отставание от графика') : tr('в графике')) : undefined}
             tone={s?.spi ? (s.spi < 0.95 ? 'bad' : 'good') : undefined} />
           <Tile label={tr('Прогноз завершения')} value={d(s?.forecast_finish)}
-            sub={s ? `план ${d(s.finish)}${s.delay_days ? `, ${s.delay_days > 0 ? '+' : ''}${s.delay_days} дн.` : ''}` : undefined}
+            sub={s ? `${tr('план')} ${d(s.finish)}${s.delay_days ? `, ${s.delay_days > 0 ? '+' : ''}${s.delay_days} ${tr('дн.')}` : ''}` : undefined}
             tone={s?.delay_days && s.delay_days > 0 ? 'bad' : undefined} />
-          <Tile label={tr('Открытые предписания')} value={String(data.issues.open)} sub={`просрочено ${data.issues.overdue}`} tone={data.issues.overdue ? 'bad' : undefined} />
+          <Tile label={tr('Открытые предписания')} value={String(data.issues.open)} sub={`${tr('просрочено')} ${data.issues.overdue}`} tone={data.issues.overdue ? 'bad' : undefined} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -108,7 +108,7 @@ function DashboardInner({ projectId }: { projectId: string }) {
                   </div>
                 ))}
                 <div className="text-xs text-text-muted">
-                  {d(s.start)} — {d(s.finish)} · задач {s.tasks}, с отставанием {s.late_tasks} · вес: {s.weight === 'cost' ? tr('стоимость') : tr('длительность')}
+                  {d(s.start)} — {d(s.finish)} · {tr('задач {n}, с отставанием {l}', { n: s.tasks ?? 0, l: s.late_tasks ?? 0 })} · {tr('вес')}: {s.weight === 'cost' ? tr('стоимость') : tr('длительность')}
                 </div>
               </div>
             ) : (
@@ -121,7 +121,7 @@ function DashboardInner({ projectId }: { projectId: string }) {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-semibold">{(q.within_tolerance * 100).toFixed(1)}%</span>
-                  <span className="text-xs text-text-secondary">точек скана в допуске ±{q.tolerance_cm} см · 95% |d| = {q.p95_mm.toFixed(0)} мм · {d(q.date)}</span>
+                  <span className="text-xs text-text-secondary">{tr('точек скана в допуске ±{tol} см', { tol: q.tolerance_cm })} · 95% |d| = {q.p95_mm.toFixed(0)} мм · {d(q.date)}</span>
                 </div>
                 <table className="w-full text-xs">
                   <thead><tr className="text-left text-text-muted"><th className="py-1 font-normal">{tr('Элемент')}</th><th className="font-normal">{tr('95%, мм')}</th><th className="font-normal">{tr('ср., мм')}</th></tr></thead>
@@ -152,13 +152,13 @@ function DashboardInner({ projectId }: { projectId: string }) {
                 </span>
               ))}
             </div>
-            <div className="mt-2 text-xs text-text-muted">За 30 дней: создано {data.issues.created_30d}, закрыто {data.issues.closed_30d}</div>
+            <div className="mt-2 text-xs text-text-muted">{tr('За 30 дней: создано {c}, закрыто {z}', { c: data.issues.created_30d, z: data.issues.closed_30d })}</div>
             {data.issues.overdue_list.length > 0 && (
               <div className="mt-3">
                 <div className="mb-1 text-xs text-red-400">{tr('Просроченные')}</div>
                 {data.issues.overdue_list.map((i) => (
                   <Link key={i.id} href={`/twin/${projectId}?issue=${i.id}`} className="block truncate py-0.5 text-xs hover:text-accent-teal">
-                    №{i.number} {i.title} <span className="text-text-muted">· срок {d(i.due_date)}</span>
+                    №{i.number} {i.title} <span className="text-text-muted">· {tr('срок')} {d(i.due_date)}</span>
                   </Link>
                 ))}
               </div>
@@ -194,7 +194,7 @@ function DashboardInner({ projectId }: { projectId: string }) {
           <Card title={tr('Модели и документы')}>
             <ul className="space-y-1 text-xs">
               {data.models.map((m) => (
-                <li key={m.name} className="flex justify-between"><span>{m.name}</span><span className="text-text-muted">версий {m.versions} · элементов {m.elements}</span></li>
+                <li key={m.name} className="flex justify-between"><span>{m.name}</span><span className="text-text-muted">{tr('версий {v} · элементов {e}', { v: m.versions, e: m.elements })}</span></li>
               ))}
               <li className="flex justify-between border-t border-bg-border/60 pt-1"><span>{tr('Документов ПД/РД')}</span><span>{data.documents}</span></li>
             </ul>

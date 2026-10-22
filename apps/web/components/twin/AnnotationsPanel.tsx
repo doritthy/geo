@@ -5,7 +5,7 @@ import { useTwinStore } from '@/lib/twin/store';
 import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { Button, Empty, ErrorBox, Field, Icons, Input } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 const COLORS = ['#F5A623', '#EF4444', '#22C55E', '#3B82F6', '#A78BFA'];
 
@@ -64,7 +64,7 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
         <div className="space-y-2 rounded-lg border border-accent-teal/50 bg-bg-panel2/60 p-3">
           <div className="text-xs text-text-secondary">
             Новая метка · H {pending.height.toFixed(2)} м
-            {pending.globalId && <span className="block text-accent-teal">Привязка к элементу {pending.globalId}</span>}
+            {pending.globalId && <span className="block text-accent-teal">{tr('Привязка к элементу')} {pending.globalId}</span>}
           </div>
           <Field label={tr('Заголовок')}>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder={tr('Например: трещина в плите')} />
@@ -114,7 +114,7 @@ export default function AnnotationsPanel({ projectId, onChanged }: { projectId: 
             >
               <div className="truncate text-sm">{a.title}</div>
               <div className="text-[11px] text-text-muted">
-                {a.author_name ?? '—'} · {new Date(a.created_at).toLocaleDateString('ru-RU')}
+                {a.author_name ?? '—'} · {new Date(a.created_at).toLocaleDateString(locale())}
                 {a.element_global_id && tr(' · элемент')}
               </div>
             </button>

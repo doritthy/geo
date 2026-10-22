@@ -798,7 +798,7 @@ export default function CesiumViewer({
       const set = store().setMeasurement;
       const { samples, cellArea } = volumeSampleGrid(pts);
       const base = pts.reduce((s, p) => s + heightOf(p), 0) / pts.length;
-      set({ tool: 'volume', lines: [{ label: tr('Объём'), value: `расчёт по ${samples.length} точкам…` }] });
+      set({ tool: 'volume', lines: [{ label: tr('Объём'), value: tr('расчёт по {n} точкам…', { n: samples.length }) }] });
       try {
         const sampled = await viewer!.scene.sampleHeightMostDetailed(samples);
         const r = volumeAgainstBase(sampled.map((c) => c?.height), cellArea, base);
@@ -879,8 +879,8 @@ export default function CesiumViewer({
         const fwd = crsRef.current.forward;
         if (fwd) {
           const [x, y] = fwd(llh.lon, llh.lat);
-          lines.push({ label: `X / Восток (${crsRef.current.label})`, value: x.toFixed(3) });
-          lines.push({ label: `Y / Север (${crsRef.current.label})`, value: y.toFixed(3) });
+          lines.push({ label: `X / ${tr('Восток')} (${crsRef.current.label})`, value: x.toFixed(3) });
+          lines.push({ label: `Y / ${tr('Север')} (${crsRef.current.label})`, value: y.toFixed(3) });
         }
         store().setMeasurement({ tool: 'point', lines });
         label(p, `H ${llh.h.toFixed(2)} м`);

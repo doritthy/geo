@@ -7,7 +7,7 @@ import { ApiError } from '@/lib/api';
 import { KIND_LABELS, type AssetKind, type SceneAsset } from '@/lib/twin/types';
 import type { FileRecord, MapLayerSummary } from '@/lib/types';
 import { Button, Empty, ErrorBox, Icons, Input, formatBytes, formatNumber } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 function PlacementEditor({ asset, onSaved }: { asset: SceneAsset; onSaved: () => void }) {
   const g = asset.georef;
@@ -89,13 +89,13 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
 
   const summary =
     asset.kind === 'bim'
-      ? `${formatNumber(asset.stats.element_count)} эл.`
+      ? `${formatNumber(asset.stats.element_count)} ${tr('эл.')}`
       : asset.kind === 'point_cloud'
-        ? `${formatNumber(asset.stats.point_count)} точек`
-        : `${formatNumber(asset.stats.triangle_count)} треуг.`;
+        ? `${formatNumber(asset.stats.point_count)} ${tr('точек')}`
+        : `${formatNumber(asset.stats.triangle_count)} ${tr('треуг.')}`;
 
   async function remove() {
-    if (!confirm(`Удалить «${asset.name}» (версия ${asset.version})?`)) return;
+    if (!confirm(tr('Удалить «{n}» (версия {v})?', { n: asset.name, v: asset.version }))) return;
     await twinApi.deleteAsset(asset.id);
     onChanged();
   }
@@ -115,7 +115,7 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
           <div className="flex gap-2 text-[11px] text-text-muted">
             <span>v{asset.version}</span>
             <span>{summary}</span>
-            {asset.captured_at && <span>{new Date(asset.captured_at).toLocaleDateString('ru-RU')}</span>}
+            {asset.captured_at && <span>{new Date(asset.captured_at).toLocaleDateString(locale())}</span>}
             {asset.georef.mode === 'anchor' && asset.georef.source === 'unplaced' && (
               <span className="text-accent-amber">{tr('не размещена')}</span>
             )}
@@ -161,9 +161,9 @@ function AssetRow({ asset, onChanged }: { asset: SceneAsset; onChanged: () => vo
             </div>
           )}
           <div className="text-[11px] text-text-muted">
-            Привязка: {asset.georef.mode === 'absolute' ? `СК ${asset.georef.crs ?? '3D Tiles'}` : `точка (${asset.georef.source})`}
+            {tr('Привязка')}: {asset.georef.mode === 'absolute' ? `${tr('СК')} ${asset.georef.crs ?? '3D Tiles'}` : `${tr('точка')} (${asset.georef.source})`}
             {asset.stats.ifc_schema ? ` · ${String(asset.stats.ifc_schema)}` : ''}
-            {asset.stats.tile_count ? ` · тайлов: ${asset.stats.tile_count}` : ''}
+            {asset.stats.tile_count ? ` · ${tr('тайлов')}: ${asset.stats.tile_count}` : ''}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setPlacing(!placing)}>{placing ? tr('Скрыть привязку') : tr('Привязка')}</Button>

@@ -82,7 +82,7 @@ export default function SettingsPanel({ project, onSaved }: { project: TwinProje
         <div className="rounded-md bg-bg-panel2/60 px-2.5 py-2 text-xs text-text-secondary">
           <div className="text-text-primary">{info.name}</div>
           {info.code && <div>{info.code}</div>}
-          {info.area_of_use && <div>Область: {info.area_of_use}</div>}
+          {info.area_of_use && <div>{tr('Область')}: {info.area_of_use}</div>}
         </div>
       )}
       {crsError && <ErrorBox>{crsError}</ErrorBox>}

@@ -246,7 +246,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
           <PropertiesPanel />
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex justify-between gap-2 bg-gradient-to-t from-bg/90 to-transparent px-3 pb-1.5 pt-4 text-[11px] text-text-secondary">
             <span className="truncate">{cursor ?? ' '}</span>
-            <span className="hidden shrink-0 sm:inline">СК проекта: {crs.label}</span>
+            <span className="hidden shrink-0 sm:inline">{tr('СК проекта')}: {crs.label}</span>
           </div>
         </main>
       </div>

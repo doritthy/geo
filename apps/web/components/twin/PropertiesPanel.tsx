@@ -5,7 +5,7 @@ import { useTwinStore } from '@/lib/twin/store';
 import { twinApi } from '@/lib/twin/api';
 import { DOC_TYPE_LABELS, type BimElementDetail } from '@/lib/twin/types';
 import { Button, Icons } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 function Row({ k, v }: { k: string; v: unknown }) {
   if (v === null || v === undefined || v === '') return null;
@@ -128,7 +128,7 @@ export default function PropertiesPanel() {
           <div className="space-y-2 text-sm">
             {note.body && <p className="whitespace-pre-wrap text-text-primary">{note.body}</p>}
             <div className="text-xs text-text-muted">
-              {note.author_name ?? '—'} · {new Date(note.created_at).toLocaleString('ru-RU')}
+              {note.author_name ?? '—'} · {new Date(note.created_at).toLocaleString(locale())}
             </div>
             {note.element_global_id && <Row k={tr('Элемент')} v={note.element_global_id} />}
             <Row k={tr('Координаты')} v={`${note.latitude.toFixed(6)}, ${note.longitude.toFixed(6)}, H ${note.height.toFixed(2)} м`} />

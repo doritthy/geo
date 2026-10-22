@@ -22,9 +22,18 @@ export function getLang(): Lang {
   return current;
 }
 
-export function tr(text: string): string {
-  if (current === 'kk') return KK[text] ?? text;
-  return text;
+/** Translate; `{name}` placeholders are filled from `vars` after lookup. */
+export function tr(text: string, vars?: Record<string, string | number>): string {
+  let out = current === 'kk' ? KK[text] ?? text : text;
+  if (vars) out = out.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+  return out;
+}
+
+/** Locale for dates and numbers. Kazakhstan uses dd.mm.yyyy and space-grouped
+ * numbers in both languages, and browsers' kk-KZ data is patchy (Chromium
+ * falls back to m/d/yyyy), so formatting stays ru-RU for now. */
+export function locale(): string {
+  return 'ru-RU';
 }
 
 export function setLang(lang: Lang): void {

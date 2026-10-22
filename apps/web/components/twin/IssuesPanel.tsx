@@ -14,7 +14,7 @@ import {
   type Member,
 } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Icons, Input, Select } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 function StatusBadge({ status }: { status: keyof typeof ISSUE_STATUS }) {
   const s = ISSUE_STATUS[status];
@@ -154,7 +154,7 @@ function IssueCard({ id, members, onChanged, onClose }: { id: string; members: M
         <div className="space-y-1.5">
           {issue.events.map((e) => (
             <div key={e.id} className="text-xs">
-              <span className="text-text-muted">{new Date(e.created_at).toLocaleString('ru-RU')} · </span>
+              <span className="text-text-muted">{new Date(e.created_at).toLocaleString(locale())} · </span>
               <span className="text-text-secondary">{e.user_name ?? '—'} </span>
               {e.kind === 'comment' ? (
                 <div className="mt-0.5 whitespace-pre-wrap rounded bg-bg-panel2 px-2 py-1 text-text-primary">{String(e.data.text)}</div>
@@ -254,9 +254,9 @@ function NewIssueForm({ projectId, members, onDone }: { projectId: string; membe
         <div>
           Место:{' '}
           {point ? (
-            <span className="text-accent-teal">точка на модели{point.globalId ? tr(' · элемент') : ''}</span>
+            <span className="text-accent-teal">{tr('точка на модели')}{point.globalId ? tr(' · элемент') : ''}</span>
           ) : geo ? (
-            <span className="text-accent-teal">геопозиция {geo.latitude.toFixed(5)}, {geo.longitude.toFixed(5)}</span>
+            <span className="text-accent-teal">{tr('геопозиция')} {geo.latitude.toFixed(5)}, {geo.longitude.toFixed(5)}</span>
           ) : (
             <span>{tr('не указано (возьмём из GPS фото, если есть)')}</span>
           )}
@@ -267,7 +267,7 @@ function NewIssueForm({ projectId, members, onDone }: { projectId: string; membe
           </Button>
           <Button type="button" onClick={useMyLocation}>{tr('Моя геопозиция')}</Button>
           <label className="cursor-pointer rounded-md border border-bg-border px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary">
-            {photo ? `Фото: ${photo.name}` : tr('Сделать фото')}
+            {photo ? `${tr('Фото')}: ${photo.name}` : tr('Сделать фото')}
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           </label>
         </div>
@@ -346,7 +346,7 @@ export default function IssuesPanel({ projectId }: { projectId: string }) {
       </div>
       <div className="flex items-center justify-between text-[11px] text-text-muted">
         <span>
-          {issues.length} шт.{Object.entries(counts).map(([k, v]) => ` · ${ISSUE_STATUS[k as keyof typeof ISSUE_STATUS].label.toLowerCase()} ${v}`)}
+          {issues.length} {tr('шт.')}{Object.entries(counts).map(([k, v]) => ` · ${ISSUE_STATUS[k as keyof typeof ISSUE_STATUS].label.toLowerCase()} ${v}`)}
         </span>
         <span className="flex gap-2">
           <button className="hover:text-text-primary" onClick={() => twinApi.downloadIssues(projectId, 'xlsx', filters)}>Excel</button>
@@ -371,7 +371,7 @@ export default function IssuesPanel({ projectId }: { projectId: string }) {
               <div className="mt-0.5 truncate text-sm">{i.title}</div>
               <div className="text-[11px] text-text-muted">
                 {i.assignee_name ?? tr('не назначен')}
-                {i.due_date && ` · до ${new Date(i.due_date).toLocaleDateString('ru-RU')}`}
+                {i.due_date && ` · ${tr('до {d}', { d: new Date(i.due_date).toLocaleDateString(locale()) })}`}
                 {i.overdue && <span className="text-red-400"> {tr('· просрочено')}</span>}
               </div>
             </button>

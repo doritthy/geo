@@ -113,7 +113,7 @@ function DocumentCard({ summary, onChanged }: { summary: DocumentSummary; onChan
   }
 
   async function remove() {
-    if (!confirm(`Удалить документ «${summary.title}» со всеми версиями?`)) return;
+    if (!confirm(tr('Удалить документ «{t}» со всеми версиями?', { t: summary.title }))) return;
     await twinApi.deleteDocument(summary.id);
     bumpData();
     onChanged();

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import proj4 from 'proj4';
 import { twinApi } from './api';
+import { tr } from '@/lib/i18n';
 
 export interface ProjectCrs {
   label: string;
@@ -35,7 +36,7 @@ export function useProjectCrs(crs: string | null | undefined): ProjectCrs {
           forward: (lon, lat) => conv.forward([lon, lat]) as [number, number],
         });
       })
-      .catch(() => !cancelled && setState({ label: `${crs} (не распознана)`, forward: null }));
+      .catch(() => !cancelled && setState({ label: `${crs} (${tr('не распознана')})`, forward: null }));
     return () => {
       cancelled = true;
     };

@@ -7,7 +7,7 @@ import AuthGuard from '@/components/AuthGuard';
 import { api, ApiError } from '@/lib/api';
 import { clearAuth, getStoredUser } from '@/lib/auth';
 import type { Project } from '@/lib/types';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 import LangSwitch from '@/components/LangSwitch';
 
 function CreateProjectDialog({ onCreated, onClose }: { onCreated: (p: Project) => void; onClose: () => void }) {
@@ -185,7 +185,7 @@ function ProjectsPageInner() {
                   <span>{p.crs ?? `EPSG:${p.default_crs_epsg}`}</span>
                   <span className="flex items-center gap-3">
                     <Link href={`/projects/${p.id}`} className="relative z-10 hover:text-text-primary">{tr('Геология')}</Link>
-                    <span>{new Date(p.created_at).toLocaleDateString('ru-RU')}</span>
+                    <span>{new Date(p.created_at).toLocaleDateString(locale())}</span>
                   </span>
                 </div>
               </div>

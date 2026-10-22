@@ -6,9 +6,9 @@ import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { TASK_STATUS, type Analysis, type ScheduleMetrics, type ScheduleTask } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Input, Select } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString('ru-RU') : '—');
+const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString(locale()) : '—');
 const pct = (v?: number | null) => (v === null || v === undefined ? '—' : `${v.toFixed(1)} %`);
 
 function addDays(iso: string, days: number) {
@@ -34,7 +34,7 @@ function TaskLinker({ task, onDone }: { task: ScheduleTask; onDone: () => void }
         ? { asset_id: assetId, ifc_type: ifcType || undefined, storey: storey || undefined }
         : { asset_id: selection!.assetId!, global_ids: [selection!.globalId!] };
       const r = await twinApi.linkTask(task.id, body);
-      setMsg(`Привязано: +${r.linked} (всего ${r.total})`);
+      setMsg(tr('Привязано: +{n} (всего {t})', { n: r.linked, t: r.total }));
       onDone();
     } catch (err) {
       setMsg(err instanceof ApiError ? err.detail : tr('Ошибка'));
@@ -94,8 +94,8 @@ function TaskRow({ task, depth, onChanged }: { task: ScheduleTask; depth: number
       {open && (
         <div className="space-y-2 py-2" style={{ paddingLeft: 22 + depth * 12 }}>
           <div className="text-[11px] text-text-muted">
-            {fmtDate(task.start_date)} — {fmtDate(task.finish_date)} · план {task.planned_percent.toFixed(0)}% · элементов {task.element_count}
-            {task.cost ? ` · ${task.cost.toLocaleString('ru-RU')} ₸` : ''}
+            {fmtDate(task.start_date)} — {fmtDate(task.finish_date)} · {tr('план')} {task.planned_percent.toFixed(0)}% · {tr('элементов')} {task.element_count}
+            {task.cost ? ` · ${task.cost.toLocaleString(locale())} ₸` : ''}
           </div>
           <div className="flex items-center gap-2">
             <Input value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal" className="w-20" />
@@ -230,10 +230,10 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
               <span className="text-text-secondary">{tr('Прогноз (по темпу)')}</span>
               <span className={`text-right ${metrics.delay_days && metrics.delay_days > 0 ? 'text-red-400' : ''}`}>
                 {fmtDate(metrics.forecast_finish)}
-                {metrics.delay_days ? ` (${metrics.delay_days > 0 ? '+' : ''}${metrics.delay_days} дн.)` : ''}
+                {metrics.delay_days ? ` (${metrics.delay_days > 0 ? '+' : ''}${metrics.delay_days} ${tr('дн.')})` : ''}
               </span>
               <span className="text-text-secondary">{tr('Задач с отставанием')}</span>
-              <span className="text-right">{metrics.late_tasks ?? 0} из {metrics.tasks ?? 0}</span>
+              <span className="text-right">{tr('{a} из {b}', { a: metrics.late_tasks ?? 0, b: metrics.tasks ?? 0 })}</span>
               <span className="col-span-2 text-[10px] text-text-muted">
                 Вес задач: {metrics.weight === 'cost' ? tr('стоимость') : tr('длительность')}. Прогноз — линейная экстраполяция по SPI.
               </span>

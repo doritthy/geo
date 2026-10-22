@@ -190,7 +190,7 @@ export const twinApi = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Предписания.${format}`;
+    a.download = `${tr('Предписания')}.${format}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { request, ApiError } from '@/lib/api';
 import { Button, Empty, ErrorBox, Icons } from './ui';
-import { tr } from '@/lib/i18n';
+import { tr, locale } from '@/lib/i18n';
 
 interface ApsNode {
   id: string;
@@ -72,7 +72,7 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
     setSyncMsg(tr('Синхронизация…'));
     try {
       const r = await request<Record<string, number>>(`/api/projects/${projectId}/autodesk/issues-sync/run`, { method: 'POST' });
-      setSyncMsg(`Отправлено новых: ${r.pushed_new}, обновлено в ACC: ${r.pushed_updates}, получено изменений: ${r.pulled_updates}, импортировано из ACC: ${r.imported}`);
+      setSyncMsg(tr('Отправлено новых: {a}, обновлено в ACC: {b}, получено изменений: {c}, импортировано из ACC: {d}', { a: r.pushed_new, b: r.pushed_updates, c: r.pulled_updates, d: r.imported }));
       request<typeof issueSync>(`/api/projects/${projectId}/autodesk/issues-sync`).then(setIssueSync).catch(() => {});
     } catch (err) {
       setSyncMsg(err instanceof ApiError ? err.detail : tr('Ошибка синхронизации'));
@@ -218,8 +218,8 @@ export default function AutodeskPanel({ projectId, onImported }: { projectId: st
           {issueSync ? (
             <>
               <div className="text-[11px] text-text-muted">
-                Проект ACC {issueSync.aps_project_id.slice(0, 8)}… · последняя синхронизация{' '}
-                {issueSync.last_pulled_at ? new Date(issueSync.last_pulled_at).toLocaleString('ru-RU') : '—'}
+                {tr('Проект ACC')} {issueSync.aps_project_id.slice(0, 8)}… · {tr('последняя синхронизация')}{' '}
+                {issueSync.last_pulled_at ? new Date(issueSync.last_pulled_at).toLocaleString(locale()) : '—'}
               </div>
               <Button variant="primary" onClick={runIssueSync}>{tr('Синхронизировать сейчас')}</Button>
             </>

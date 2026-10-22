@@ -80,7 +80,7 @@ export default function ProfileChart() {
     <div className="absolute bottom-10 left-3 right-3 z-20 rounded-xl border border-bg-border bg-bg-panel/95 p-3 backdrop-blur sm:left-16">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
         <span className="font-semibold text-text-primary">{tr('Профиль-разрез')}</span>
-        {data && <span className="text-text-muted">длина {data.length.toFixed(1)} м · коридор скана 0,4 м</span>}
+        {data && <span className="text-text-muted">{tr('длина {l} м · коридор скана 0,4 м', { l: data.length.toFixed(1) })}</span>}
         <Select value={bimId} onChange={(e) => setBimId(e.target.value)} className="!w-auto !py-1 text-xs">
           <option value="">{tr('без модели')}</option>
           {models.map((m) => <option key={m.id} value={m.id}>{m.name} · v{m.version}</option>)}

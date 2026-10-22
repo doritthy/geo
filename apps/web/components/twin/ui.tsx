@@ -3,6 +3,7 @@
 // Small shared UI primitives + inline icons for the twin workspace.
 
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { locale } from '@/lib/i18n';
 
 export const inputCls =
   'w-full rounded-md border border-bg-border bg-bg-panel2 px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent-teal';
@@ -81,7 +82,7 @@ export function formatBytes(n: number): string {
 }
 
 export function formatNumber(n: number | undefined): string {
-  return n === undefined ? '—' : n.toLocaleString('ru-RU');
+  return n === undefined ? '—' : n.toLocaleString(locale());
 }
 
 const svg = (d: ReactNode) => (
