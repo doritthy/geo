@@ -30,6 +30,7 @@ apps/api/app/
   notify.py        email (SMTP; в тестах notify.outbox)
   push.py          Web Push (VAPID; в тестах push.outbox), подписки — routers/push.py
   progress.py      прогресс конвертаций → files.metadata.progress
+  iot.py, iot_mqtt.py  датчики: ingest/пороги/события; мост MQTT → ingest (routers/iot.py — API)
   queue.py, worker.py  фоновые задачи: JOB_MODE=inline (BackgroundTasks) | queue (таблица jobs + воркер);
                    новые фоновые работы — только через queue.enqueue(kind, payload, background_tasks)
   parsers/         vector_parser.py (GeoJSON/KML/DXF/GPKG) + геологические парсеры

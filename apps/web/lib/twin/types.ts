@@ -364,3 +364,49 @@ export const TASK_STATUS: Record<TaskStatus, { label: string; color: string }> =
   not_started: { label: tr('Не начато'), color: '#94A3B8' },
   future: { label: tr('По плану позже'), color: 'rgba(148,163,184,0.18)' },
 };
+
+export type SensorKind = 'temperature' | 'strain' | 'tilt' | 'displacement' | 'humidity' | 'other';
+export type SensorState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
+
+export interface Sensor {
+  id: string;
+  project_id: string;
+  code: string;
+  name: string;
+  kind: SensorKind;
+  unit: string;
+  longitude: number | null;
+  latitude: number | null;
+  height: number | null;
+  asset_id: string | null;
+  element_global_id: string | null;
+  warn_min: number | null;
+  warn_max: number | null;
+  alarm_min: number | null;
+  alarm_max: number | null;
+  stale_minutes: number;
+  last_value: number | null;
+  last_at: string | null;
+  state: SensorState;
+  created_at: string;
+  /** Only for project editors (GET /api/sensors/{id}, create, rotate). */
+  ingest_token?: string;
+}
+
+export interface SensorSeries {
+  sensor_id: string;
+  unit: string;
+  bucket_seconds: number;
+  thresholds: { warn_min: number | null; warn_max: number | null; alarm_min: number | null; alarm_max: number | null };
+  points: { ts: string; value: number; min: number; max: number }[];
+}
+
+export interface SensorAlert {
+  id: number;
+  sensor_id: string;
+  sensor_name: string;
+  ts: string;
+  level: 'ok' | 'warn' | 'alarm';
+  value: number;
+  message: string;
+}

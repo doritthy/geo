@@ -118,6 +118,42 @@ services:
     volumes:
       - ./apps/api:/app
 
+  # IoT: MQTT broker for site gateways + bridge into the platform
+  # (topic twin/sensors/<sensor id>, payload {"token", "value", "ts"}).
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  iot-bridge:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    command: ["python", "-m", "app.iot_mqtt"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://subsurface:subsurface@postgres:5432/subsurface
+      JWT_SECRET: change-me-in-production
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: subsurface
+      S3_SECRET_KEY: subsurface123
+      S3_BUCKET: subsurface-data
+      PUBLIC_WEB_URL: http://localhost:3000
+      SMTP_HOST: ${SMTP_HOST:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+    volumes:
+      - ./apps/api:/app
+
   web:
     build:
       context: ./apps/web

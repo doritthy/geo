@@ -16,6 +16,7 @@ from app.routers import (
     files,
     formations,
     grids,
+    iot,
     issues,
     maps,
     organization,
@@ -72,6 +73,7 @@ app.include_router(organization.router)
 app.include_router(schedule.router)
 app.include_router(dashboard.router)
 app.include_router(push.router)
+app.include_router(iot.router)
 
 
 @app.get("/health")

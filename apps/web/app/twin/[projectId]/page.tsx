@@ -21,6 +21,7 @@ import SettingsPanel from '@/components/twin/SettingsPanel';
 import AutodeskPanel from '@/components/twin/AutodeskPanel';
 import AnalysisPanel from '@/components/twin/AnalysisPanel';
 import IssuesPanel from '@/components/twin/IssuesPanel';
+import SensorsPanel from '@/components/twin/SensorsPanel';
 import SchedulePanel from '@/components/twin/SchedulePanel';
 import PropertiesPanel from '@/components/twin/PropertiesPanel';
 import UploadDialog from '@/components/twin/UploadDialog';
@@ -40,6 +41,7 @@ const PANELS: { key: SidePanel; title: string; icon: JSX.Element }[] = [
   { key: 'layers', title: tr('Слои'), icon: Icons.layers },
   { key: 'search', title: tr('Поиск элементов'), icon: Icons.search },
   { key: 'issues', title: tr('Предписания и замечания'), icon: Icons.issue },
+  { key: 'sensors', title: tr('Датчики IoT'), icon: Icons.sensor },
   { key: 'annotations', title: tr('Метки'), icon: Icons.annotate },
   { key: 'documents', title: tr('Документы ПД/РД'), icon: Icons.docs },
   { key: 'compare', title: tr('Сравнение версий'), icon: Icons.compare },
@@ -85,7 +87,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
   const loadAnnotations = useCallback(() => twinApi.listAnnotations(projectId).then(setAnnotations), [projectId, setAnnotations]);
 
   useEffect(() => {
-    useTwinStore.setState({ assets: [], selection: null, compare: null, highlight: null, annotations: [], issues: [], openIssueId: null });
+    useTwinStore.setState({ assets: [], selection: null, compare: null, highlight: null, annotations: [], issues: [], openIssueId: null, sensors: [], openSensorId: null, pendingSensorPoint: null });
     twinApi
       .getProject(projectId)
       .then(setProject)
@@ -95,7 +97,17 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
     twinApi.listIssues(projectId, { status: 'open,in_progress,review' }).then(useTwinStore.getState().setIssues).catch(() => {});
     const issueParam = new URLSearchParams(window.location.search).get('issue');
     if (issueParam) useTwinStore.getState().setOpenIssueId(issueParam);
+    const sensorParam = new URLSearchParams(window.location.search).get('sensor');
+    if (sensorParam) useTwinStore.getState().setOpenSensorId(sensorParam);
   }, [projectId, loadAssets, loadAnnotations]);
+
+  // IoT: keep sensor states and latest values fresh.
+  useEffect(() => {
+    const load = () => twinApi.listSensors(projectId).then(useTwinStore.getState().setSensors).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [projectId]);
 
   // Poll while conversions are running.
   const twinCategories = ['bim', 'point_cloud', 'reality_mesh', 'map_vector', 'map_raster'];
@@ -230,6 +242,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
               {panel === 'compare' && <ComparePanel />}
               {panel === 'schedule' && <SchedulePanel projectId={projectId} />}
               {panel === 'issues' && <IssuesPanel projectId={projectId} />}
+              {panel === 'sensors' && <SensorsPanel projectId={projectId} canEdit={user?.role !== 'viewer'} />}
               {panel === 'analysis' && <AnalysisPanel projectId={projectId} onAssetsChanged={loadAssets} />}
               {panel === 'autodesk' && <AutodeskPanel projectId={projectId} onImported={loadAssets} />}
               {panel === 'settings' && <SettingsPanel project={project} onSaved={setProject} />}

@@ -9,6 +9,8 @@ import AuthGuard from '@/components/AuthGuard';
 import { request, ApiError } from '@/lib/api';
 import { ISSUE_STATUS, type IssueStatus, type ScheduleMetrics } from '@/lib/twin/types';
 import { tr, locale } from '@/lib/i18n';
+import { SENSOR_STATE } from '@/components/twin/SensorsPanel';
+import type { SensorState } from '@/lib/twin/types';
 
 interface Dashboard {
   project: { id: string; name: string; description: string | null };
@@ -31,6 +33,11 @@ interface Dashboard {
     p95_mm: number;
     worst: { name: string; p95_mm: number; mean_mm: number }[];
   } | null;
+  sensors: {
+    total: number;
+    by_state: Partial<Record<SensorState, number>>;
+    attention: { id: string; name: string; state: SensorState; value: number | null; unit: string }[];
+  };
   models: { name: string; versions: number; elements: number }[];
   scans: { name: string; captured_at: string; kind: string }[];
   documents: number;
@@ -190,6 +197,35 @@ function DashboardInner({ projectId }: { projectId: string }) {
               </ul>
             )}
           </Card>
+
+          {data.sensors.total > 0 && (
+            <Card title={tr('Датчики IoT')}>
+              <div className="mb-2 flex flex-wrap gap-3 text-xs">
+                {(['alarm', 'warn', 'stale', 'ok', 'none'] as SensorState[]).filter((st) => data.sensors.by_state[st]).map((st) => (
+                  <span key={st} className="flex items-center gap-1 text-text-secondary">
+                    <span className="h-2 w-2 rounded-full" style={{ background: SENSOR_STATE[st].color }} />
+                    {SENSOR_STATE[st].label} {data.sensors.by_state[st]}
+                  </span>
+                ))}
+              </div>
+              {data.sensors.attention.length === 0 ? (
+                <div className="text-sm text-text-muted">{tr('Все датчики в норме.')}</div>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {data.sensors.attention.map((sn) => (
+                    <li key={sn.id}>
+                      <Link href={`/twin/${projectId}?sensor=${sn.id}`} className="flex justify-between gap-2 hover:text-accent-teal">
+                        <span className="truncate">{sn.name}</span>
+                        <span style={{ color: SENSOR_STATE[sn.state].color }}>
+                          {sn.value === null ? '—' : `${Number(sn.value.toFixed(2))} ${sn.unit}`} · {SENSOR_STATE[sn.state].label}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
 
           <Card title={tr('Модели и документы')}>
             <ul className="space-y-1 text-xs">

@@ -166,7 +166,7 @@ def _clean_tables():
     from app.db import engine
 
     tables = [
-        "push_subscriptions", "autodesk_issue_sync", "jobs", "schedule_task_elements", "schedule_tasks", "issue_events", "issue_attachments", "issues", "analyses", "autodesk_links", "autodesk_connections", "document_links", "document_versions", "documents", "annotations", "bim_elements", "scene_assets",
+        "sensor_alerts", "sensor_readings", "sensors", "push_subscriptions", "autodesk_issue_sync", "jobs", "schedule_task_elements", "schedule_tasks", "issue_events", "issue_attachments", "issues", "analyses", "autodesk_links", "autodesk_connections", "document_links", "document_versions", "documents", "annotations", "bim_elements", "scene_assets",
         "formations", "map_layers", "surfaces", "grid_properties", "grids",
         "well_logs", "well_markers", "well_trajectory_points", "wells",
         "files", "project_members", "projects", "users", "organizations",

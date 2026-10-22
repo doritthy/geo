@@ -592,3 +592,48 @@ class PushSubscription(Base):
     p256dh: Mapped[str] = mapped_column(Text, nullable=False)
     auth: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Sensor(Base):
+    __tablename__ = "sensors"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=gen_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    code: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[str] = mapped_column(Text, nullable=False, default="other")
+    unit: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    longitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    height: Mapped[float | None] = mapped_column(Double, nullable=True)
+    asset_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("scene_assets.id", ondelete="SET NULL"), nullable=True)
+    element_global_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    warn_min: Mapped[float | None] = mapped_column(Double, nullable=True)
+    warn_max: Mapped[float | None] = mapped_column(Double, nullable=True)
+    alarm_min: Mapped[float | None] = mapped_column(Double, nullable=True)
+    alarm_max: Mapped[float | None] = mapped_column(Double, nullable=True)
+    stale_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    ingest_token: Mapped[str] = mapped_column(Text, nullable=False)
+    last_value: Mapped[float | None] = mapped_column(Double, nullable=True)
+    last_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    state: Mapped[str] = mapped_column(Text, nullable=False, default="none")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class SensorReading(Base):
+    __tablename__ = "sensor_readings"
+
+    sensor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sensors.id", ondelete="CASCADE"), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(primary_key=True)
+    value: Mapped[float] = mapped_column(Double, nullable=False)
+
+
+class SensorAlert(Base):
+    __tablename__ = "sensor_alerts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    sensor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sensors.id", ondelete="CASCADE"), nullable=False)
+    ts: Mapped[datetime] = mapped_column(nullable=False)
+    level: Mapped[str] = mapped_column(Text, nullable=False)
+    value: Mapped[float] = mapped_column(Double, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)

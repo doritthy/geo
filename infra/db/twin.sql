@@ -278,3 +278,46 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(use
 -- Job priorities: lower runs first (interactive work before background indexing).
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL DEFAULT 100;
 CREATE INDEX IF NOT EXISTS idx_jobs_priority ON jobs(status, priority, id);
+
+-- IoT: sensors on site (concrete temperature, strain, tilt, displacement…),
+-- their readings (time series) and threshold alerts.
+CREATE TABLE IF NOT EXISTS sensors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,                      -- device id used by the gateway (unique per project)
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'other',      -- temperature | strain | tilt | displacement | humidity | other
+  unit TEXT NOT NULL DEFAULT '',
+  longitude DOUBLE PRECISION,
+  latitude DOUBLE PRECISION,
+  height DOUBLE PRECISION,
+  asset_id UUID REFERENCES scene_assets(id) ON DELETE SET NULL,
+  element_global_id TEXT,
+  warn_min DOUBLE PRECISION, warn_max DOUBLE PRECISION,
+  alarm_min DOUBLE PRECISION, alarm_max DOUBLE PRECISION,
+  stale_minutes INTEGER NOT NULL DEFAULT 60,
+  ingest_token TEXT NOT NULL,              -- per-sensor secret for HTTP/MQTT ingestion
+  last_value DOUBLE PRECISION,
+  last_at TIMESTAMPTZ,
+  state TEXT NOT NULL DEFAULT 'none',      -- none | ok | warn | alarm (stale is derived from last_at)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (project_id, code)
+);
+CREATE INDEX IF NOT EXISTS idx_sensors_project ON sensors(project_id);
+
+CREATE TABLE IF NOT EXISTS sensor_readings (
+  sensor_id UUID NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
+  ts TIMESTAMPTZ NOT NULL,
+  value DOUBLE PRECISION NOT NULL,
+  PRIMARY KEY (sensor_id, ts)
+);
+
+CREATE TABLE IF NOT EXISTS sensor_alerts (
+  id BIGSERIAL PRIMARY KEY,
+  sensor_id UUID NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
+  ts TIMESTAMPTZ NOT NULL,
+  level TEXT NOT NULL,                     -- warn | alarm | ok (back to normal)
+  value DOUBLE PRECISION NOT NULL,
+  message TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sensor_alerts_sensor ON sensor_alerts(sensor_id, ts DESC);

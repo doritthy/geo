@@ -22,6 +22,9 @@ import type {
   ScheduleTask,
   SceneAsset,
   SceneAssetUpdate,
+  Sensor,
+  SensorAlert,
+  SensorSeries,
   TwinProject,
   TwinUploadCategory,
   TwinUploadOptions,
@@ -217,5 +220,14 @@ export const twinApi = {
 
   resolveCrs: (value: string) => request<CrsInfo>(`/api/crs/resolve${qs({ value })}`),
   crsPresets: () => request<{ value: string; label: string }[]>('/api/crs/presets'),
+  listSensors: (projectId: string) => request<Sensor[]>(`/api/projects/${projectId}/sensors`),
+  getSensor: (id: string) => request<Sensor>(`/api/sensors/${id}`),
+  createSensor: (projectId: string, body: Partial<Sensor>) =>
+    request<Sensor>(`/api/projects/${projectId}/sensors`, { method: 'POST', body: JSON.stringify(body) }),
+  updateSensor: (id: string, body: Partial<Sensor>) => request<Sensor>(`/api/sensors/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteSensor: (id: string) => request<void>(`/api/sensors/${id}`, { method: 'DELETE' }),
+  rotateSensorToken: (id: string) => request<Sensor>(`/api/sensors/${id}/rotate-token`, { method: 'POST' }),
+  sensorReadings: (id: string, hours: number) => request<SensorSeries>(`/api/sensors/${id}/readings${qs({ hours, points: 400 })}`),
+  sensorAlerts: (projectId: string) => request<SensorAlert[]>(`/api/projects/${projectId}/sensor-alerts${qs({ limit: 50 })}`),
   geoids: () => request<{ value: string; label: string }[]>('/api/crs/geoids'),
 };

@@ -116,6 +116,7 @@ export const Icons = {
   profile: svg(<><path d="M3 17l5-6 4 3 4-7 5 5" /><path d="M3 21h18" /></>),
   schedule: svg(<><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4M7 13h5M7 17h9" /></>),
   issue: svg(<><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></>),
+  sensor: svg(<><circle cx="12" cy="12" r="2" /><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5" /></>),
   analysis: svg(<><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></>),
   cloud: svg(<path d="M7 18a5 5 0 01-.6-10A6 6 0 0118 9a4.5 4.5 0 01-.5 9z" />),
   upload: svg(<><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v4h16v-4" /></>),

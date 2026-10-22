@@ -74,6 +74,12 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 - Профиль-разрез вдоль линии: линии сечения BIM и точки скана на графике.
 - Синхронизация предписаний с ACC Issues; PWA (установка на телефон, кэш статики).
 - Управление пользователями организации (API).
+- **IoT (MVP Фазы 3)**: реестр датчиков (температура бетона, деформация, крен, смещение, влажность),
+  приём показаний по HTTP (`POST /api/iot/ingest`, заголовок `X-Sensor-Token`) и MQTT
+  (топик `twin/sensors/<id>`, мост `python -m app.iot_mqtt`, брокер mosquitto в compose),
+  пороги предупреждения/аварии с гистерезисом, журнал событий, push/email при эскалации (только свежие —
+  буфер шлюза за прошлые сутки не рассылается), метки на 3D-сцене с текущим значением, графики 24 ч / 7 / 30 дн.
+  с min/max, карточка на дашборде. Демо: `scripts/iot_simulator.py` (вызывается из `seed_demo.py`).
 
 ## Ограничения и что не сделано
 
@@ -126,6 +132,9 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | POST/GET | `/api/projects/{id}/schedule/import`, `/schedule`, `/schedule/element-status` | 4D-график |
 | POST | `/api/schedule/tasks/{id}/elements`, `/api/projects/{id}/schedule/progress-from-analysis` | Привязка, факт по скану |
 | GET | `/api/projects/{id}/dashboard` | Дашборд |
+| GET/POST | `/api/projects/{id}/sensors`; GET/PATCH/DELETE `/api/sensors/{id}` | Датчики IoT (токен — только редакторам) |
+| GET | `/api/sensors/{id}/readings?hours=&points=`, `/api/projects/{id}/sensor-alerts` | Ряды (усреднение + min/max), события |
+| POST | `/api/iot/ingest` (`X-Sensor-Token`) | Приём показаний от шлюза: `{value, ts}` или `{readings: [...]}` |
 | GET/POST/PATCH | `/api/organization/users` | Пользователи организации (админ) |
 | … | `/api/integrations/autodesk/*`, `/api/projects/{id}/autodesk/imports` | Autodesk ACC |
 

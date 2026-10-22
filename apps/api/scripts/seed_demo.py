@@ -86,6 +86,12 @@ def main() -> None:
             break
         time.sleep(1)
     print(f"deviation analysis: {a['status']} {a.get('error_message') or ''}")
+
+    # IoT: demo sensors with a week of history
+    import subprocess
+
+    subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "iot_simulator.py"), "--api", args.api,
+                    "--project", pid, "--email", args.email, "--password", args.password], check=False)
     print(f"\nГотово. Вход: {args.email} / {args.password}; проект {pid}")
 
 

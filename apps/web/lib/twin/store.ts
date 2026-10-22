@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Annotation, BimElementSummary, CompareResult, Issue, SceneAsset } from './types';
+import type { Annotation, BimElementSummary, CompareResult, Issue, SceneAsset, Sensor } from './types';
 
 export type ToolMode =
   | 'select'
@@ -11,9 +11,10 @@ export type ToolMode =
   | 'volume'
   | 'annotate'
   | 'issue'
+  | 'sensor'
   | 'profile';
 
-export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'schedule' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
+export type SidePanel = 'layers' | 'search' | 'annotations' | 'issues' | 'sensors' | 'schedule' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
 
 export interface Selection {
   kind: 'element' | 'feature' | 'annotation' | 'issue';
@@ -95,6 +96,7 @@ interface TwinState {
     bbox?: { min: number[]; max: number[] };
     annotationId?: string;
     issueId?: string;
+    sensorId?: string;
     point?: { longitude: number; latitude: number; height: number };
     nonce: number;
   } | null;
@@ -110,6 +112,14 @@ interface TwinState {
   setPendingIssuePoint: (p: TwinState['pendingIssuePoint']) => void;
   openIssueId: string | null;
   setOpenIssueId: (id: string | null) => void;
+
+  sensors: Sensor[];
+  setSensors: (s: Sensor[]) => void;
+  openSensorId: string | null;
+  setOpenSensorId: (id: string | null) => void;
+  /** Point picked with the 'sensor' tool (placing a new sensor). */
+  pendingSensorPoint: { longitude: number; latitude: number; height: number; assetId?: string; globalId?: string } | null;
+  setPendingSensorPoint: (p: TwinState['pendingSensorPoint']) => void;
 
   profileLine: { a: [number, number]; b: [number, number] } | null;
   setProfileLine: (p: TwinState['profileLine']) => void;
@@ -207,6 +217,14 @@ export const useTwinStore = create<TwinState>((set) => ({
     set(pendingIssuePoint ? { pendingIssuePoint, panel: 'issues', panelOpen: true, tool: 'select' } : { pendingIssuePoint }),
   openIssueId: null,
   setOpenIssueId: (openIssueId) => set(openIssueId ? { openIssueId, panel: 'issues', panelOpen: true } : { openIssueId }),
+
+  sensors: [],
+  setSensors: (sensors) => set({ sensors }),
+  openSensorId: null,
+  setOpenSensorId: (openSensorId) => set(openSensorId ? { openSensorId, panel: 'sensors', panelOpen: true } : { openSensorId }),
+  pendingSensorPoint: null,
+  setPendingSensorPoint: (pendingSensorPoint) =>
+    set(pendingSensorPoint ? { pendingSensorPoint, panel: 'sensors', panelOpen: true, tool: 'select' } : { pendingSensorPoint }),
 
   profileLine: null,
   setProfileLine: (profileLine) => set({ profileLine }),

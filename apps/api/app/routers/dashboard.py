@@ -1,6 +1,6 @@
 """Project dashboard (дашборд прогресса для заказчика): schedule progress
 and SPI, issues by status / overdue / assignee, latest deviation analysis,
-scans timeline, model versions."""
+scans timeline, model versions, IoT sensor states."""
 
 from datetime import date
 
@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import project_viewer
-from app.models import Analysis, Document, Issue, Project, ScheduleTask, SceneAsset, User
+from app import iot
+from app.models import Analysis, Document, Issue, Project, ScheduleTask, SceneAsset, Sensor, User
 from app.twin.schedule import metrics
 
 router = APIRouter(tags=["dashboard"])
@@ -53,8 +54,19 @@ def dashboard(project: Project = Depends(project_viewer), db: Session = Depends(
     created_30 = sum(1 for i in issues if (today - i.created_at.date()).days <= 30)
     closed_30 = sum(1 for i in issues if i.closed_at and (today - i.closed_at.date()).days <= 30)
 
+    sensors = db.query(Sensor).filter(Sensor.project_id == project.id).all()
+    sensor_states: dict[str, int] = {}
+    for sn in sensors:
+        st = iot.effective_state(sn)
+        sensor_states[st] = sensor_states.get(st, 0) + 1
+
     return {
         "project": {"id": str(project.id), "name": project.name, "description": project.description},
+        "sensors": {
+            "total": len(sensors), "by_state": sensor_states,
+            "attention": [{"id": str(sn.id), "name": sn.name, "state": iot.effective_state(sn), "value": sn.last_value, "unit": sn.unit}
+                          for sn in sensors if iot.effective_state(sn) in ("alarm", "warn", "stale")][:10],
+        },
         "schedule": metrics(tasks, today) if tasks else None,
         "issues": {
             "total": len(issues), "open": len(open_issues), "overdue": len(overdue), "by_status": by_status,

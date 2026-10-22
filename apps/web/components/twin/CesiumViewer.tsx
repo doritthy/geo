@@ -30,6 +30,7 @@ import {
   Entity,
   GeoJsonDataSource,
   HeightReference,
+  HorizontalOrigin,
   HeadingPitchRange,
 
   ImageryLayer,
@@ -54,6 +55,7 @@ import {
 } from 'cesium';
 import { useTwinStore, type ToolMode } from '@/lib/twin/store';
 import { absoluteUrl, authHeaders, twinApi } from '@/lib/twin/api';
+import { SENSOR_STATE } from './SensorsPanel';
 import type { SceneAsset } from '@/lib/twin/types';
 import type { MapLayerSummary } from '@/lib/types';
 import type { ProjectCrs } from '@/lib/twin/crs';
@@ -121,6 +123,28 @@ function modelMatrixFor(asset: SceneAsset, tileset?: Cesium3DTileset): Matrix4 {
   return base;
 }
 
+/** Sensor marker: a ring in the state colour around a dark core. */
+function makeSensorDot(color: string): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = 26;
+  c.height = 26;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#0B0F19';
+  ctx.beginPath();
+  ctx.arc(13, 13, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(13, 13, 8, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(13, 13, 3, 0, Math.PI * 2);
+  ctx.fill();
+  return c;
+}
+
 function makePin(color: string): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = 28;
@@ -171,6 +195,7 @@ export default function CesiumViewer({
   const measureRef = useRef<CustomDataSource | null>(null);
   const notesRef = useRef<CustomDataSource | null>(null);
   const issuesRef = useRef<CustomDataSource | null>(null);
+  const sensorsRef = useRef<CustomDataSource | null>(null);
   const mapSourcesRef = useRef<Map<string, GeoJsonDataSource | ImageryLayer>>(new Map());
   const crsRef = useRef(crs);
   crsRef.current = crs;
@@ -192,6 +217,7 @@ export default function CesiumViewer({
   const tool = useTwinStore((s) => s.tool);
   const annotations = useTwinStore((s) => s.annotations);
   const issues = useTwinStore((s) => s.issues);
+  const sensors = useTwinStore((s) => s.sensors);
   const timelineEnabled = useTwinStore((s) => s.timelineEnabled);
   const timelineDate = useTwinStore((s) => s.timelineDate);
   const planView = useTwinStore((s) => s.planView);
@@ -240,6 +266,9 @@ export default function CesiumViewer({
     viewer.dataSources.add(notes);
     viewer.dataSources.add(issueSource);
     issuesRef.current = issueSource;
+    const sensorSource = new CustomDataSource('sensors');
+    viewer.dataSources.add(sensorSource);
+    sensorsRef.current = sensorSource;
     measureRef.current = measure;
     notesRef.current = notes;
     viewerRef.current = viewer;
@@ -619,6 +648,43 @@ export default function CesiumViewer({
     }
   }, [issues]);
 
+  // ---------- IoT sensors ----------
+  useEffect(() => {
+    const src = sensorsRef.current;
+    if (!src) return;
+    src.entities.removeAll();
+    for (const sn of sensors) {
+      if (sn.longitude === null || sn.latitude === null) continue;
+      const color = SENSOR_STATE[sn.state].color;
+      const value = sn.last_value === null ? '—' : `${Number(sn.last_value.toFixed(1))} ${sn.unit}`.trim();
+      src.entities.add(
+        new Entity({
+          id: `sensor:${sn.id}`,
+          position: Cartesian3.fromDegrees(sn.longitude, sn.latitude, sn.height ?? 0),
+          billboard: {
+            image: makeSensorDot(color),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            scaleByDistance: new NearFarScalar(50, 1.0, 5000, 0.5),
+            heightReference: sn.height === null ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+          },
+          label: {
+            text: value,
+            font: 'bold 12px sans-serif',
+            fillColor: sn.state === 'alarm' || sn.state === 'warn' ? Color.fromCssColorString(color) : Color.WHITE,
+            outlineColor: Color.fromCssColorString('#0B0F19'),
+            outlineWidth: 3,
+            style: LabelStyle.FILL_AND_OUTLINE,
+            pixelOffset: new Cartesian2(16, 0),
+            horizontalOrigin: HorizontalOrigin.LEFT,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            scaleByDistance: new NearFarScalar(50, 1.0, 3000, 0.0),
+            heightReference: sn.height === null ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+          },
+        })
+      );
+    }
+  }, [sensors]);
+
   // ---------- fly to ----------
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -629,6 +695,11 @@ export default function CesiumViewer({
         duration: 1.2,
         offset: new HeadingPitchRange(0.5, -0.5, 25),
       });
+      return;
+    }
+    if (flyTo.sensorId) {
+      const ent = sensorsRef.current?.entities.getById(`sensor:${flyTo.sensorId}`);
+      if (ent) viewer.flyTo(ent, { duration: 1.2, offset: new HeadingPitchRange(0.4, -0.5, 35) });
       return;
     }
     if (flyTo.issueId) {
@@ -831,7 +902,7 @@ export default function CesiumViewer({
     handler.setInputAction((e: { position: Cartesian2 }) => {
       const currentTool = store().tool;
 
-      if (currentTool === 'select' || currentTool === 'annotate' || currentTool === 'issue') {
+      if (currentTool === 'select' || currentTool === 'annotate' || currentTool === 'issue' || currentTool === 'sensor') {
         const picked = viewer.scene.pick(e.position);
         const position = pick(e.position);
         let assetId: string | undefined;
@@ -840,16 +911,19 @@ export default function CesiumViewer({
           for (const [id, entry] of tilesetsRef.current) if (entry.tileset === picked.tileset) assetId = id;
           globalId = picked.getProperty('GlobalId') as string | undefined;
         }
-        if (currentTool === 'annotate' || currentTool === 'issue') {
+        if (currentTool === 'annotate' || currentTool === 'issue' || currentTool === 'sensor') {
           if (!position) return;
           const llh = toLonLatH(position);
           const point = { longitude: llh.lon, latitude: llh.lat, height: llh.h, assetId, globalId };
-          if (currentTool === 'issue') store().setPendingIssuePoint(point);
+          if (currentTool === 'sensor') store().setPendingSensorPoint(point);
+          else if (currentTool === 'issue') store().setPendingIssuePoint(point);
           else store().setPendingAnnotation(point);
           return;
         }
         if (globalId && assetId) {
           store().setSelection({ kind: 'element', assetId, globalId, title: picked.getProperty('Name') as string });
+        } else if (picked?.id instanceof Entity && String(picked.id.id).startsWith('sensor:')) {
+          store().setOpenSensorId(String(picked.id.id).slice(7));
         } else if (picked?.id instanceof Entity && String(picked.id.id).startsWith('issue:')) {
           store().setOpenIssueId(String(picked.id.id).slice(6));
         } else if (picked?.id instanceof Entity && String(picked.id.id).startsWith('note:')) {
