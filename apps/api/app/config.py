@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "twin@localhost"
     SMTP_TLS: bool = True
 
+    # Web Push (optional). Generate a pair with `python -m app.push`.
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:twin@localhost"
+
+    @property
+    def push_configured(self) -> bool:
+        return bool(self.VAPID_PUBLIC_KEY and self.VAPID_PRIVATE_KEY)
+
     @property
     def aps_configured(self) -> bool:
         return bool(self.APS_CLIENT_ID and self.APS_CLIENT_SECRET)

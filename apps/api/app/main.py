@@ -20,6 +20,7 @@ from app.routers import (
     maps,
     organization,
     projects,
+    push,
     schedule,
     surfaces,
     wells,
@@ -70,6 +71,7 @@ app.include_router(issues.router)
 app.include_router(organization.router)
 app.include_router(schedule.router)
 app.include_router(dashboard.router)
+app.include_router(push.router)
 
 
 @app.get("/health")

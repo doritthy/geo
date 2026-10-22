@@ -263,3 +263,14 @@ CREATE INDEX IF NOT EXISTS idx_document_versions_fts
 
 -- Raster map layers: XYZ tile pyramid metadata (prefix, zoom range, bounds).
 ALTER TABLE map_layers ADD COLUMN IF NOT EXISTS tiles JSONB;
+
+-- Web Push subscriptions (one per browser/device).
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);

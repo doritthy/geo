@@ -29,6 +29,7 @@ import { Icons, IconButton } from '@/components/twin/ui';
 import ProfileChart from '@/components/twin/ProfileChart';
 import { tr } from '@/lib/i18n';
 import LangSwitch from '@/components/LangSwitch';
+import PushToggle from '@/components/PushToggle';
 
 const CesiumViewer = dynamic(() => import('@/components/twin/CesiumViewer'), {
   ssr: false,
@@ -175,6 +176,7 @@ function TwinWorkspace({ projectId }: { projectId: string }) {
           <Link href={`/projects/${projectId}`} className="hidden rounded-md border border-bg-border px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary md:inline">
             {tr('Геология')}
           </Link>
+          <PushToggle />
           <LangSwitch />
           <span className="hidden text-xs text-text-secondary lg:inline">{user?.full_name ?? user?.email}</span>
           <button

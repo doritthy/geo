@@ -139,6 +139,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | `APS_WEBHOOK_URL`, `APS_WEBHOOK_SECRET` | Публичный адрес вебхука и секрет подписи |
 | `PUBLIC_WEB_URL` | Куда возвращать пользователя после входа в Autodesk; ссылки в письмах |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_TLS` | Email-уведомления о предписаниях |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push о предписаниях (ключи: `python -m app.push`). Без ключей колокольчик скрыт |
 
 Существующая база (созданная до появления двойника) обновляется вручную:
 `psql "$DATABASE_URL" -f infra/db/twin.sql` (скрипт идемпотентный).

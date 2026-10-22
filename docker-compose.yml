@@ -77,6 +77,16 @@ services:
       APS_WEBHOOK_URL: ${APS_WEBHOOK_URL:-}
       APS_WEBHOOK_SECRET: ${APS_WEBHOOK_SECRET:-}
       PUBLIC_WEB_URL: http://localhost:3000
+      # Issue notifications (optional): email via SMTP, Web Push via VAPID
+      # (generate keys: docker compose run --rm api python -m app.push)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-twin@localhost}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:twin@localhost}
     ports:
       - "8000:8000"
     volumes:

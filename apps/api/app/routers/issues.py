@@ -19,6 +19,7 @@ from app.db import get_db
 from app.deps import _require_project_role, get_project_scoped_or_404, project_editor, project_viewer
 from app.models import Issue, IssueAttachment, IssueEvent, Project, ProjectMember, SceneAsset, User
 from app.notify import send_email
+from app.push import send_push
 from app.security import get_current_user
 from app.storage import open_stream, upload_fileobj
 
@@ -187,10 +188,14 @@ def _issue_for(issue_id: uuid.UUID, db: Session, user: User, editor: bool = Fals
 
 def _notify(bg: BackgroundTasks, db: Session, issue: Issue, actor: User, subject: str, body: str) -> None:
     ids = {issue.assignee_id, issue.created_by} - {actor.id, None}
-    emails = [u.email for u in db.query(User).filter(User.id.in_(ids)).all()] if ids else []
+    if not ids:
+        return
+    path = f"/twin/{issue.project_id}?issue={issue.id}"
+    bg.add_task(send_push, list(ids), f"{KIND_LABELS[issue.kind]} №{issue.number}: {subject}", f"«{issue.title}» — {body}", path)
+    emails = [u.email for u in db.query(User).filter(User.id.in_(ids)).all()]
     if not emails:
         return
-    link = f"{get_settings().PUBLIC_WEB_URL.rstrip('/')}/twin/{issue.project_id}?issue={issue.id}"
+    link = f"{get_settings().PUBLIC_WEB_URL.rstrip('/')}{path}"
     bg.add_task(send_email, emails, f"[{KIND_LABELS[issue.kind]} №{issue.number}] {subject}",
                 f"{body}\n\n«{issue.title}»\nСтатус: {STATUS_LABELS[issue.status]}\n"
                 f"Срок: {issue.due_date.strftime('%d.%m.%Y') if issue.due_date else '—'}\n\n{link}\n")
