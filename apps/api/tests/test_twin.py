@@ -499,3 +499,44 @@ def test_large_mesh_builds_lod_tree(client, monkeypatch):
     assert max(img.size) < 512  # cropped to the leaf's part of the atlas
     parent = glb_of(inner[0])
     assert parent.visual.kind == "vertex" and len(parent.faces) <= 1000
+
+
+def test_ifc_importance_lod(client, monkeypatch):
+    from app.twin import ifc_convert
+    from scripts.make_demo_data import make_building
+
+    monkeypatch.setattr(ifc_convert, "MAX_TILE_VERTICES", 400)
+    monkeypatch.setattr(ifc_convert, "NODE_VERTICES", 200)
+    h = _headers(client)
+    pid = _project(client, h)
+    asset_id = _upload(client, h, pid, "b.ifc", make_building(storeys=3), "bim")
+    asset = client.get(f"/api/assets/{asset_id}", headers=h).json()
+    ts = _tileset(client, h, asset)
+
+    def walk(node, depth=0):
+        yield node, depth
+        for c in node.get("children", []):
+            yield from walk(c, depth + 1)
+
+    nodes = list(walk(ts["root"]))
+    assert max(d for _, d in nodes) >= 3
+    for n, _ in nodes:
+        assert n["refine"] == "ADD"
+        for c in n.get("children", []):
+            assert c["geometricError"] <= n["geometricError"]
+
+    def batch(node):
+        data = client.get(f"/api/assets/{asset_id}/tiles/{node['content']['uri']}", headers=h).content
+        ft_json, ft_bin, bt_json, _ = struct.unpack_from("<4I", data, 12)
+        return json.loads(data[28 + ft_json + ft_bin: 28 + ft_json + ft_bin + bt_json])
+
+    ids, top_types = [], None
+    for n, d in nodes:
+        if "content" in n:
+            bt = batch(n)
+            ids += bt["GlobalId"]
+            if top_types is None:
+                top_types = set(bt["IfcType"])
+    # Every element in exactly one tile; the top tile holds the big structure.
+    assert len(ids) == len(set(ids)) == asset["stats"]["element_count"]
+    assert top_types <= {"IfcSlab", "IfcWall", "IfcWallStandardCase", "IfcColumn"} and "IfcWindow" not in top_types

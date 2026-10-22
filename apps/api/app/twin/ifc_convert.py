@@ -30,6 +30,9 @@ from app.twin import georef as geo
 from app.twin.tiles import Primitive, TileNode, build_b3dm, build_glb, box_diagonal, oriented_box, tileset_json, union_box
 
 MAX_TILE_VERTICES = 300_000
+# Inner LOD nodes hold the largest elements of their region up to this budget;
+# smaller elements go to children (refine ADD). Small models stay flat.
+NODE_VERTICES = 120_000
 _SKIP_CLASSES = ("IfcOpeningElement", "IfcSpace", "IfcVirtualElement", "IfcAnnotation", "IfcGrid")
 
 # Fallback palette (RGBA) for products without a surface style.
@@ -61,6 +64,7 @@ class _ElementGeom:
     pieces: list[tuple[tuple, np.ndarray, np.ndarray]]  # (rgba, positions (n,3), indices (m,))
     centroid: np.ndarray = field(default_factory=lambda: np.zeros(3))
     vertex_count: int = 0
+    size: float = 0.0  # bbox diagonal, tile frame
 
 
 @dataclass
@@ -251,18 +255,15 @@ def _iterate_geometry(model) -> tuple[list[_ElementGeom], list[dict]]:
     return geoms, metas
 
 
-def _partition(elems: list[_ElementGeom]) -> list[list[_ElementGeom]]:
-    """Recursive median split on the longest axis of element centroids."""
-    total = sum(e.vertex_count for e in elems)
-    if total <= MAX_TILE_VERTICES or len(elems) <= 1:
+def _split(elems: list[_ElementGeom]) -> list[list[_ElementGeom]]:
+    """Median split of element centroids on the longest axis."""
+    if len(elems) <= 1:
         return [elems]
     cents = np.array([e.centroid for e in elems])
     axis = int(np.argmax(cents.max(axis=0) - cents.min(axis=0)))
     order = np.argsort(cents[:, axis], kind="stable")
     mid = len(order) // 2
-    left = [elems[i] for i in order[:mid]]
-    right = [elems[i] for i in order[mid:]]
-    return _partition(left) + _partition(right)
+    return [[elems[i] for i in order[:mid]], [elems[i] for i in order[mid:]]]
 
 
 def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
@@ -321,6 +322,7 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
         e.pieces = [(c, to_tile(pos), idx) for c, pos, idx in e.pieces]
         allp = np.vstack([p[1] for p in e.pieces])
         e.centroid = allp.mean(axis=0)
+        e.size = float(np.linalg.norm(allp.max(axis=0) - allp.min(axis=0)))
         metas[e.index]["bbox"] = {
             "min": [round(float(v), 3) for v in allp.min(axis=0)],
             "max": [round(float(v), 3) for v in allp.max(axis=0)],
@@ -335,10 +337,13 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
 
     # --- tiles ---
     os.makedirs(os.path.join(out_dir, "tiles"), exist_ok=True)
-    chunks = _partition(geoms)
-    children: list[TileNode] = []
-    for ti, chunk in enumerate(chunks):
-        report("Запись тайлов", ti / max(len(chunks), 1))
+    counter = {"tiles": 0, "elements": 0}
+
+    def write_tile(chunk: list[_ElementGeom], geometric_error: float, children: list[TileNode]) -> TileNode:
+        ti = counter["tiles"]
+        counter["tiles"] += 1
+        counter["elements"] += len(chunk)
+        report("Запись тайлов", counter["elements"] / len(geoms))
         pts = np.vstack([p[1] for e in chunk for p in e.pieces])
         origin, box = oriented_box(pts, axes, pad=0.05)
         by_color: dict[tuple, list] = {}
@@ -370,10 +375,29 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
         uri = f"tiles/{ti}.b3dm"
         with open(os.path.join(out_dir, uri), "wb") as fh:
             fh.write(build_b3dm(build_glb(prims), batch_table, len(chunk)))
-        children.append(TileNode(box=box, geometric_error=0.0, content_uri=uri, origin=origin))
+        if children:
+            box = union_box([box] + [c.box for c in children], axes)
+        return TileNode(box=box, geometric_error=geometric_error, content_uri=uri, origin=origin, children=children)
 
-    root_box = union_box([c.box for c in children], axes)
-    root = TileNode(box=root_box, geometric_error=max(1000.0, box_diagonal(root_box) * 10), children=children)
+    def build(elems: list[_ElementGeom]) -> TileNode:
+        """Importance LOD: a node shows the biggest elements of its region;
+        its geometric error is the size of the biggest element it leaves to
+        its children, so structure appears first and details stream in."""
+        if sum(e.vertex_count for e in elems) <= MAX_TILE_VERTICES or len(elems) <= 1:
+            return write_tile(elems, 0.0, [])
+        by_size = sorted(elems, key=lambda e: (-e.size, e.index))
+        own, budget = [], 0
+        for e in by_size:
+            if own and budget + e.vertex_count > NODE_VERTICES:
+                break
+            own.append(e)
+            budget += e.vertex_count
+        rest = by_size[len(own):]
+        children = [build(part) for part in _split(rest)]
+        return write_tile(own, max(e.size for e in rest), children)
+
+    lod_root = build(geoms)
+    root = TileNode(box=lod_root.box, geometric_error=max(1000.0, box_diagonal(lod_root.box) * 10), children=[lod_root])
     with open(os.path.join(out_dir, "tileset.json"), "w") as fh:
         json.dump(tileset_json(root), fh)
 
@@ -386,7 +410,7 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
 
     stats = {
         "element_count": len(metas),
-        "tile_count": len(children),
+        "tile_count": counter["tiles"],
         "triangle_count": int(sum(len(p[2]) // 3 for e in geoms for p in e.pieces)),
         "ifc_schema": model.schema,
         "ifc_types": dict(sorted(types.items(), key=lambda kv: -kv[1])),
@@ -394,5 +418,5 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
         "bounds_model": {"min": all_min.tolist(), "max": all_max.tolist()},
     }
     if georef["mode"] == "absolute":
-        stats["center"] = geo.llh_summary(np.array(root_box[:3]))
+        stats["center"] = geo.llh_summary(np.array(lod_root.box[:3]))
     return ConversionResult(georef=georef, stats=stats, elements=metas)
