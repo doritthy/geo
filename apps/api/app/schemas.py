@@ -311,6 +311,7 @@ class SceneAssetUpdate(BaseModel):
     heading: float | None = None
     scale: float | None = Field(default=None, gt=0)
     offset_enu: list[float] | None = Field(default=None, min_length=3, max_length=3)
+    reset_alignment: bool = False
 
 
 class BimElementSummary(BaseModel):

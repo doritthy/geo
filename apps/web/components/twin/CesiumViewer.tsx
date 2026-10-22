@@ -95,21 +95,27 @@ const MEASURE_COLOR = Color.fromCssColorString('#FACC15');
 /** modelMatrix for a tileset: anchor placement for local models, optional
  * ENU fine-alignment offset for CRS-placed (absolute) ones. */
 function modelMatrixFor(asset: SceneAsset, tileset?: Cesium3DTileset): Matrix4 {
+  // Mirrors apps/api/app/twin/georef.py::asset_world_matrix:
+  // alignment (ICP) · (anchor placement | ENU fine offset).
   const g = asset.georef;
+  let base = Matrix4.IDENTITY.clone();
   if (g.mode === 'anchor') {
     const origin = Cartesian3.fromDegrees(g.longitude, g.latitude, g.height);
     const enu = Transforms.eastNorthUpToFixedFrame(origin);
     const rot = Matrix4.fromRotationTranslation(Matrix3.fromRotationZ(-CesiumMath.toRadians(g.heading || 0)));
     const scale = Matrix4.fromUniformScale(g.scale || 1);
-    return Matrix4.multiply(Matrix4.multiply(enu, rot, new Matrix4()), scale, new Matrix4());
-  }
-  if (g.offset_enu && tileset) {
-    const enu = Transforms.eastNorthUpToFixedFrame(tileset.root.boundingSphere.center);
+    base = Matrix4.multiply(Matrix4.multiply(enu, rot, new Matrix4()), scale, new Matrix4());
+  } else if (g.offset_enu && (asset.stats.center || tileset)) {
+    const c = asset.stats.center;
+    const ref = c ? Cartesian3.fromDegrees(c.longitude, c.latitude, c.height) : tileset!.root.boundingSphere.center;
+    const enu = Transforms.eastNorthUpToFixedFrame(ref);
     const [e, n, u] = g.offset_enu;
-    const offset = Matrix4.multiplyByPointAsVector(enu, new Cartesian3(e, n, u), new Cartesian3());
-    return Matrix4.fromTranslation(offset);
+    base = Matrix4.fromTranslation(Matrix4.multiplyByPointAsVector(enu, new Cartesian3(e, n, u), new Cartesian3()));
   }
-  return Matrix4.IDENTITY.clone();
+  if (g.alignment && g.alignment.length === 16) {
+    base = Matrix4.multiply(Matrix4.fromColumnMajorArray(g.alignment), base, new Matrix4());
+  }
+  return base;
 }
 
 function makePin(color: string): HTMLCanvasElement {
@@ -178,6 +184,7 @@ export default function CesiumViewer({
   const selection = useTwinStore((s) => s.selection);
   const compare = useTwinStore((s) => s.compare);
   const highlight = useTwinStore((s) => s.highlight);
+  const elementColors = useTwinStore((s) => s.elementColors);
   const tool = useTwinStore((s) => s.tool);
   const annotations = useTwinStore((s) => s.annotations);
   const timelineEnabled = useTwinStore((s) => s.timelineEnabled);
@@ -190,8 +197,8 @@ export default function CesiumViewer({
   const mapLayerVisible = useTwinStore((s) => s.mapLayerVisible);
 
   // Latest styling inputs for tile-load callbacks (which outlive renders).
-  const styleState = useRef({ opacity, hiddenTypes, selection, compare, highlight });
-  styleState.current = { opacity, hiddenTypes, selection, compare, highlight };
+  const styleState = useRef({ opacity, hiddenTypes, selection, compare, highlight, elementColors });
+  styleState.current = { opacity, hiddenTypes, selection, compare, highlight, elementColors };
 
   // ---------- init ----------
   useEffect(() => {
@@ -249,7 +256,8 @@ export default function CesiumViewer({
 
   // ---------- feature styling (BIM) ----------
   function styleContent(entry: TilesetEntry, content: Cesium3DTileContent) {
-    const { opacity: op, hiddenTypes: hidden, selection: sel, compare: cmp, highlight: hl } = styleState.current;
+    const { opacity: op, hiddenTypes: hidden, selection: sel, compare: cmp, highlight: hl, elementColors: ec } = styleState.current;
+    const colorMap = ec && ec.assetId === entry.asset.id ? ec.colors : null;
     const alpha = op[entry.asset.id] ?? 1;
     const hiddenSet = new Set(hidden[entry.asset.id] ?? []);
     let cmpMap: Map<string, Color> | null = null;
@@ -278,6 +286,9 @@ export default function CesiumViewer({
         if (c) f.color = c;
         else if (isBase) f.show = false;
         else f.color = COMPARE_COLORS.unchanged;
+      } else if (colorMap) {
+        const css = gid ? colorMap[gid] : undefined;
+        f.color = css ? Color.fromCssColorString(css) : COMPARE_COLORS.unchanged;
       } else if (hlSet && gid && hlSet.has(gid)) f.color = HIGHLIGHT_COLOR;
       else f.color = Color.WHITE.withAlpha(alpha);
     }
@@ -289,7 +300,7 @@ export default function CesiumViewer({
     }
   }
 
-  useEffect(restyleAll, [opacity, hiddenTypes, selection, compare, highlight, tilesetTick]);
+  useEffect(restyleAll, [opacity, hiddenTypes, selection, compare, highlight, elementColors, tilesetTick]);
 
   // Non-BIM opacity / point size via declarative styles.
   useEffect(() => {
@@ -331,7 +342,7 @@ export default function CesiumViewer({
       const resource = new Resource({ url: absoluteUrl(asset.tileset_url), headers: authHeaders() });
       Cesium3DTileset.fromUrl(resource, {
         maximumScreenSpaceError: asset.kind === 'point_cloud' ? 4 : 16,
-        modelMatrix: asset.georef.mode === 'anchor' ? modelMatrixFor(asset) : Matrix4.IDENTITY,
+        modelMatrix: modelMatrixFor(asset),
       })
         .then((tileset) => {
           if (cancelled || viewer.isDestroyed() || current.has(asset.id)) {
@@ -563,6 +574,14 @@ export default function CesiumViewer({
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !flyTo) return;
+    if (flyTo.point) {
+      const p = Cartesian3.fromDegrees(flyTo.point.longitude, flyTo.point.latitude, flyTo.point.height);
+      viewer.camera.flyToBoundingSphere(new BoundingSphere(p, 3), {
+        duration: 1.2,
+        offset: new HeadingPitchRange(0.5, -0.5, 25),
+      });
+      return;
+    }
     if (flyTo.annotationId) {
       const ent = notesRef.current?.entities.getById(`note:${flyTo.annotationId}`);
       if (ent) viewer.flyTo(ent, { duration: 1.2, offset: new HeadingPitchRange(0, -0.6, 40) });

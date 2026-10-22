@@ -26,3 +26,5 @@ pye57==0.4.19
 pyproj==3.8.0
 pillow==11.3.0
 cryptography>=42
+reportlab==5.0.1
+openpyxl==3.1.5

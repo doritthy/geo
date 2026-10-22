@@ -11,7 +11,7 @@ export type ToolMode =
   | 'volume'
   | 'annotate';
 
-export type SidePanel = 'layers' | 'search' | 'annotations' | 'documents' | 'compare' | 'autodesk' | 'settings';
+export type SidePanel = 'layers' | 'search' | 'annotations' | 'documents' | 'compare' | 'analysis' | 'autodesk' | 'settings';
 
 export interface Selection {
   kind: 'element' | 'feature' | 'annotation';
@@ -86,11 +86,22 @@ interface TwinState {
   clip: ClipState;
   setClip: (patch: Partial<ClipState>) => void;
 
-  flyTo: { assetId?: string; globalId?: string; bbox?: { min: number[]; max: number[] }; annotationId?: string; nonce: number } | null;
+  flyTo: {
+    assetId?: string;
+    globalId?: string;
+    bbox?: { min: number[]; max: number[] };
+    annotationId?: string;
+    point?: { longitude: number; latitude: number; height: number };
+    nonce: number;
+  } | null;
   requestFlyTo: (target: Omit<NonNullable<TwinState['flyTo']>, 'nonce'>) => void;
 
   highlight: BimElementSummary[] | null;
   setHighlight: (h: BimElementSummary[] | null) => void;
+
+  /** Per-element colours (CSS) for one BIM asset, e.g. deviation classes. */
+  elementColors: { assetId: string; colors: Record<string, string> } | null;
+  setElementColors: (c: TwinState['elementColors']) => void;
 
   /** Bumped when documents/annotations change so detail views refetch. */
   dataTick: number;
@@ -106,7 +117,11 @@ export const useTwinStore = create<TwinState>((set) => ({
       const latest = new Map<string, number>();
       for (const a of assets) latest.set(a.version_group, Math.max(latest.get(a.version_group) ?? 0, a.version));
       const visible = { ...s.visible };
-      for (const a of assets) if (!(a.id in visible)) visible[a.id] = a.version === latest.get(a.version_group);
+      for (const a of assets) {
+        if (a.id in visible) continue;
+        // Analysis results (deviation maps) are opened from the analysis panel.
+        visible[a.id] = a.version === latest.get(a.version_group) && !a.stats.analysis_id;
+      }
       return { assets, visible };
     }),
 
@@ -169,6 +184,9 @@ export const useTwinStore = create<TwinState>((set) => ({
 
   highlight: null,
   setHighlight: (highlight) => set({ highlight }),
+
+  elementColors: null,
+  setElementColors: (elementColors) => set({ elementColors }),
 
   dataTick: 0,
   bumpData: () => set((s) => ({ dataTick: s.dataTick + 1 })),

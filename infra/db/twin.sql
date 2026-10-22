@@ -132,3 +132,19 @@ CREATE TABLE IF NOT EXISTS autodesk_links (
 );
 CREATE INDEX IF NOT EXISTS idx_autodesk_links_item ON autodesk_links(item_id);
 CREATE INDEX IF NOT EXISTS idx_autodesk_links_project ON autodesk_links(project_id);
+
+-- Server-side analyses: deviation maps (scan vs BIM), ICP alignment, ...
+CREATE TABLE IF NOT EXISTS analyses (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,                       -- deviation | alignment
+  params JSONB NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'pending',   -- pending | running | ready | error
+  error_message TEXT,
+  result JSONB NOT NULL DEFAULT '{}',
+  result_asset_id UUID REFERENCES scene_assets(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_analyses_project ON analyses(project_id);

@@ -175,8 +175,24 @@ class ConversionResult:
     stats: dict
 
 
-def convert_point_cloud(path: str, source_format: str, out_dir: str, options: dict) -> ConversionResult:
-    src = open_point_cloud(path, source_format)
+def array_source(xyz_ecef: np.ndarray, rgb: np.ndarray) -> _Source:
+    """In-memory ECEF points (analysis results, e.g. deviation maps)."""
+    rec = np.empty(len(xyz_ecef), dtype=_REC)
+    rec["x"], rec["y"], rec["z"] = xyz_ecef[:, 0], xyz_ecef[:, 1], xyz_ecef[:, 2]
+    rec["r"], rec["g"], rec["b"] = rgb[:, 0], rgb[:, 1], rgb[:, 2]
+
+    def chunks() -> Iterator[np.ndarray]:
+        for s in range(0, len(rec), CHUNK):
+            yield rec[s : s + CHUNK]
+
+    from pyproj import CRS
+
+    return _Source(len(rec), xyz_ecef.min(axis=0), xyz_ecef.max(axis=0), CRS.from_epsg(4978).to_wkt(), True, chunks)
+
+
+def convert_point_cloud(path: str | None, source_format: str, out_dir: str, options: dict,
+                        source: _Source | None = None) -> ConversionResult:
+    src = source or open_point_cloud(path, source_format)
     if src.count == 0:
         raise ValueError("Облако точек пустое")
 

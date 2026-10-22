@@ -95,6 +95,9 @@ def update_asset(
             )
         georef.update({k: float(v) for k, v in placement.items() if v is not None})
         georef["source"] = "manual"
+    if data.get("reset_alignment"):
+        georef.pop("alignment", None)
+        georef.pop("alignment_source", None)
     if "offset_enu" in data:
         georef["offset_enu"] = [float(v) for v in data["offset_enu"]] if data["offset_enu"] else None
     asset.georef = georef

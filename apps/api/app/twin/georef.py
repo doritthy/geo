@@ -131,3 +131,38 @@ def dms_to_degrees(dms) -> float | None:
     deg, minutes, sec, micro = (float(p) for p in parts[:4])
     sign = -1.0 if (deg < 0 or minutes < 0 or sec < 0 or micro < 0) else 1.0
     return sign * (abs(deg) + abs(minutes) / 60.0 + (abs(sec) + abs(micro) / 1e6) / 3600.0)
+
+
+def anchor_matrix(g: dict) -> np.ndarray:
+    """4x4 local model frame -> ECEF for an anchor placement (mirrors the
+    client: ENU(lon, lat, h) · Rz(-heading) · scale)."""
+    origin = llh_to_ecef(g.get("longitude", 0.0), g.get("latitude", 0.0), g.get("height", 0.0))
+    enu = enu_axes(g.get("longitude", 0.0), g.get("latitude", 0.0))  # rows e, n, u
+    m = np.eye(4)
+    m[:3, :3] = enu.T
+    m[:3, 3] = origin
+    a = -math.radians(g.get("heading", 0.0) or 0.0)
+    rot = np.eye(4)
+    rot[:2, :2] = [[math.cos(a), -math.sin(a)], [math.sin(a), math.cos(a)]]
+    scale = np.diag([g.get("scale", 1.0) or 1.0] * 3 + [1.0])
+    return m @ rot @ scale
+
+
+def asset_world_matrix(georef: dict, center_llh: dict | None = None) -> np.ndarray:
+    """Tileset frame -> ECEF, exactly as the viewer places the tileset:
+    alignment (ICP) · (anchor placement | ENU fine offset)."""
+    if georef.get("mode") == "anchor":
+        base = anchor_matrix(georef)
+    else:
+        base = np.eye(4)
+        off = georef.get("offset_enu")
+        if off and center_llh:
+            base[:3, 3] = enu_axes(center_llh["longitude"], center_llh["latitude"]).T @ np.asarray(off, dtype=np.float64)
+    align = georef.get("alignment")
+    if align:
+        base = np.asarray(align, dtype=np.float64).reshape(4, 4).T @ base
+    return base
+
+
+def apply_matrix(m: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    return pts @ m[:3, :3].T + m[:3, 3]

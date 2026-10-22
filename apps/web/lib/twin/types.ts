@@ -13,6 +13,7 @@ export interface AnchorGeoref {
   heading: number;
   scale: number;
   local_origin?: number[];
+  alignment?: number[];
 }
 
 export interface AbsoluteGeoref {
@@ -21,6 +22,8 @@ export interface AbsoluteGeoref {
   crs?: string;
   height_offset?: number;
   offset_enu?: number[] | null;
+  alignment?: number[];
+  alignment_source?: string;
 }
 
 export type Georef = AnchorGeoref | AbsoluteGeoref;
@@ -60,6 +63,7 @@ export interface SceneAssetUpdate {
   heading?: number;
   scale?: number;
   offset_enu?: number[] | null;
+  reset_alignment?: boolean;
 }
 
 export interface BimElementSummary {
@@ -192,3 +196,53 @@ export const KIND_LABELS: Record<AssetKind, string> = {
   point_cloud: 'Облака точек',
   mesh: 'Reality Capture',
 };
+
+export interface DeviationElement {
+  global_id: string;
+  ifc_type: string;
+  name: string;
+  points: number;
+  mean: number;
+  mean_abs: number;
+  rms: number;
+  max_abs: number;
+  p95_abs: number;
+  out_of_tolerance: number;
+  longitude: number;
+  latitude: number;
+  height: number;
+}
+
+export interface Analysis {
+  id: string;
+  kind: 'deviation' | 'alignment';
+  status: 'pending' | 'running' | 'ready' | 'error';
+  params: { cloud_asset_id: string; bim_asset_id: string; tolerances?: number[]; max_distance?: number };
+  error_message: string | null;
+  result: {
+    tolerances?: number[];
+    histogram?: {
+      bins: { label: string; color: string; count: number }[];
+      related_points: number;
+      unrelated_points: number;
+      within_tolerance: number;
+      mean: number | null;
+      rms: number | null;
+      p95_abs: number | null;
+    };
+    elements?: DeviationElement[];
+    elements_total?: number;
+    points_used?: number;
+    points_total?: number;
+    rmse_before?: number;
+    rmse_after?: number;
+    yaw_deg?: number;
+    translation_enu?: number[];
+    match_ratio?: number;
+    cloud?: { id: string; name: string };
+    bim?: { id: string; name: string; version: number };
+  };
+  result_asset_id: string | null;
+  created_at: string;
+  finished_at: string | null;
+}

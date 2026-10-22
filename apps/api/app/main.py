@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import (
+    analyses,
     annotations,
     assets,
     auth,
@@ -60,6 +61,7 @@ app.include_router(annotations.router)
 app.include_router(documents.router)
 app.include_router(crs.router)
 app.include_router(autodesk.router)
+app.include_router(analyses.router)
 
 
 @app.get("/health")

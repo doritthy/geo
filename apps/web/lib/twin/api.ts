@@ -14,6 +14,7 @@ import type {
   DocumentDetail,
   DocumentSummary,
   ElementPage,
+  Analysis,
   SceneAsset,
   SceneAssetUpdate,
   TwinProject,
@@ -136,6 +137,24 @@ export const twinApi = {
     const res = await fetch(absoluteUrl(`/api/map-layers/${id}/image`), { headers: authHeaders() });
     if (!res.ok) throw new ApiError(res.status, 'Растр недоступен');
     return URL.createObjectURL(await res.blob());
+  },
+
+  listAnalyses: (projectId: string) => request<Analysis[]>(`/api/projects/${projectId}/analyses`),
+  getAnalysis: (id: string) => request<Analysis>(`/api/analyses/${id}`),
+  runDeviation: (projectId: string, body: { cloud_asset_id: string; bim_asset_id: string; tolerances: number[]; max_distance: number }) =>
+    request<Analysis>(`/api/projects/${projectId}/analyses/deviation`, { method: 'POST', body: JSON.stringify(body) }),
+  runAlignment: (projectId: string, body: { cloud_asset_id: string; bim_asset_id: string; apply: boolean }) =>
+    request<Analysis>(`/api/projects/${projectId}/analyses/alignment`, { method: 'POST', body: JSON.stringify(body) }),
+  deleteAnalysis: (id: string) => request<void>(`/api/analyses/${id}`, { method: 'DELETE' }),
+  async downloadReport(id: string) {
+    const res = await fetch(absoluteUrl(`/api/analyses/${id}/report.pdf`), { headers: authHeaders() });
+    if (!res.ok) throw new ApiError(res.status, 'Не удалось сформировать отчёт');
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Отчёт_отклонения.pdf';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 
   resolveCrs: (value: string) => request<CrsInfo>(`/api/crs/resolve${qs({ value })}`),

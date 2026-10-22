@@ -114,7 +114,10 @@ def make_building(storeys: int = 5, variant: int = 1) -> bytes:
                 # v2: column C-3-1 on storey 2 moved by 15 cm (geometry change)
                 dx = 0.15 if (variant == 2 and k == 1 and i == 3 and j == 1) else 0.0
                 rep = ifcopenshell.api.geometry.add_profile_representation(m, context=body, profile=col_profile, depth=h)
-                add("IfcColumn", f"Колонна {k + 1}-{i}-{j}", rep, concrete, storey, i * SPAN + dx, j * SPAN, z + 0.22,
+                # Perimeter columns sit inside the 0.3 m external walls.
+                cx = min(max(i * SPAN, 0.5), lx - 0.5) + dx
+                cy = min(max(j * SPAN, 0.5), ly - 0.5)
+                add("IfcColumn", f"Колонна {k + 1}-{i}-{j}", rep, concrete, storey, cx, cy, z + 0.22,
                     psets={"Pset_ColumnCommon": {"LoadBearing": True, "Reference": "К-1"}})
 
         for side, (x, y, rot, length) in enumerate(
@@ -187,8 +190,9 @@ def make_scan(storeys_built: int = 3, spacing: float = 0.12, seed: int = 7) -> b
             tt, hh = np.meshgrid(t, hz)
             tt, hh = tt.ravel(), hh.ravel()
             ux, uy = (x1 - x0) / length, (y1 - y0) / length
-            wx = x0 + ux * tt + uy * 0.15
-            wy = y0 + uy * tt - ux * 0.15
+            # Outer wall face: the IFC walls extend inward from their axis line.
+            wx = x0 + ux * tt
+            wy = y0 + uy * tt
             pts.append(np.column_stack([wx, wy, z + hh + rng.normal(0, 0.01, tt.size)]))
             cols.append(np.tile([200, 140, 110], (tt.size, 1)))
 

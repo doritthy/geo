@@ -7,7 +7,7 @@ FROM python:3.13-slim
 # rasterio wheel; build-essential covers any
 # source builds pip needs to do.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl libgomp1 libexpat1 \
+    && apt-get install -y --no-install-recommends build-essential curl libgomp1 libexpat1 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
