@@ -19,6 +19,7 @@ from app.routers import (
     grids,
     iot,
     issues,
+    ks,
     maps,
     organization,
     projects,
@@ -78,6 +79,7 @@ app.include_router(push.router)
 app.include_router(iot.router)
 app.include_router(tokens.router)
 app.include_router(branding.router)
+app.include_router(ks.router)
 
 
 @app.get("/health")

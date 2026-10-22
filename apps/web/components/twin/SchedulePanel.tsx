@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTwinStore } from '@/lib/twin/store';
-import { twinApi } from '@/lib/twin/api';
-import { ApiError } from '@/lib/api';
+import { absoluteUrl, authHeaders, twinApi } from '@/lib/twin/api';
+import { ApiError, request } from '@/lib/api';
 import { TASK_STATUS, type Analysis, type ScheduleMetrics, type ScheduleTask } from '@/lib/twin/types';
 import { Button, Empty, ErrorBox, Field, Input, Select } from './ui';
 import { tr, locale } from '@/lib/i18n';
@@ -265,8 +265,87 @@ export default function SchedulePanel({ projectId }: { projectId: string }) {
           <div className="space-y-0.5">
             {tasks.map((t) => <TaskRow key={t.id} task={t} depth={depth.get(t.id) ?? 0} onChanged={load} />)}
           </div>
+          <KsActs projectId={projectId} />
         </>
       )}
     </div>
+  );
+}
+
+interface KsAct { id: string; number: number; period_from: string; period_to: string; total: number; items: unknown[] }
+
+/** Drafts of КС-2 / КС-3 from progress deltas since the previous act. */
+function KsActs({ projectId }: { projectId: string }) {
+  const [acts, setActs] = useState<KsAct[]>([]);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [parties, setParties] = useState({ customer: '', contractor: '', contract: '' });
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => request<KsAct[]>(`/api/projects/${projectId}/ks-acts`).then((a) => {
+    setActs(a);
+    if (a.length && !from) {
+      const next = new Date(a[0].period_to);
+      next.setDate(next.getDate() + 1);
+      setFrom(next.toISOString().slice(0, 10));
+    }
+  }).catch(() => {}), [projectId, from]);
+  useEffect(() => { load(); }, [load]);
+  const money = (v: number) => v.toLocaleString(locale(), { maximumFractionDigits: 0 });
+
+  async function create(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await request(`/api/projects/${projectId}/ks-acts`, { method: 'POST', body: JSON.stringify({ period_from: from, period_to: to, ...parties }) });
+      setFrom('');
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : tr('Не удалось создать'));
+    }
+  }
+
+  async function download(id: string, kind: 'ks2' | 'ks3', name: string) {
+    const res = await fetch(absoluteUrl(`/api/ks-acts/${id}/${kind}.xlsx`), { headers: authHeaders() });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  return (
+    <details className="rounded-md border border-bg-border px-2.5 py-2 text-xs">
+      <summary className="cursor-pointer text-text-secondary">{tr('Акты КС-2 / КС-3')}{acts.length ? ` · ${acts.length}` : ''}</summary>
+      <div className="mt-2 space-y-2">
+        <p className="text-[11px] text-text-muted">{tr('Черновик акта: стоимость задач × прирост % выполнения с прошлого акта, НДС 12 %. Выгрузка в Excel для проверки и проведения в 1С.')}</p>
+        {acts.map((a) => (
+          <div key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-bg-border/60 pb-1">
+            <span className="whitespace-nowrap font-semibold">№ {a.number}</span>
+            <span className="whitespace-nowrap text-text-muted">{new Date(a.period_from).toLocaleDateString(locale())} — {new Date(a.period_to).toLocaleDateString(locale())}</span>
+            <span className="ml-auto whitespace-nowrap tabular-nums">{money(a.total)} ₸</span>
+            <span className="basis-full" />
+            <button className="text-accent-teal hover:underline" onClick={() => download(a.id, 'ks2', `KS-2_${a.number}.xlsx`)}>КС-2</button>
+            <button className="text-accent-teal hover:underline" onClick={() => download(a.id, 'ks3', `KS-3_${a.number}.xlsx`)}>КС-3</button>
+          </div>
+        ))}
+        <form onSubmit={create} className="space-y-2 rounded-md bg-bg-panel2/50 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Field label={tr('Период с')}><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} required /></Field>
+            <Field label={tr('по')}><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} required /></Field>
+          </div>
+          {acts.length === 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              <Input value={parties.customer} onChange={(e) => setParties({ ...parties, customer: e.target.value })} placeholder={tr('Заказчик')} />
+              <Input value={parties.contractor} onChange={(e) => setParties({ ...parties, contractor: e.target.value })} placeholder={tr('Подрядчик')} />
+              <Input value={parties.contract} onChange={(e) => setParties({ ...parties, contract: e.target.value })} placeholder={tr('Договор №, дата')} className="col-span-2" />
+            </div>
+          )}
+          {error && <ErrorBox>{error}</ErrorBox>}
+          <Button type="submit">{tr('Сформировать акт')}</Button>
+        </form>
+      </div>
+    </details>
   );
 }

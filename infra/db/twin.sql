@@ -342,3 +342,19 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_name TEXT;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS brand_color TEXT;   -- #RRGGBB
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_key TEXT;      -- object key in S3
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_type TEXT;
+
+-- Acts of completed works (КС-2 / КС-3 drafts) built from the schedule:
+-- amount = task cost × (progress now − progress in the previous act).
+CREATE TABLE IF NOT EXISTS ks_acts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  number INTEGER NOT NULL,
+  period_from DATE NOT NULL,
+  period_to DATE NOT NULL,
+  header JSONB NOT NULL DEFAULT '{}',     -- customer, contractor, contract, object
+  items JSONB NOT NULL DEFAULT '[]',      -- [{key, name, wbs, cost, pct_before, pct_now, amount}]
+  total NUMERIC(18, 2) NOT NULL DEFAULT 0,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (project_id, number)
+);

@@ -22,11 +22,14 @@ apps/api/app/
   twin/            конвертеры → OGC 3D Tiles: ifc_convert.py, pointcloud_convert.py, mesh_convert.py,
                    tiles.py (writers glb/b3dm/pnts/tileset), georef.py (PROJ, ECEF, якорь, world matrix), jobs.py;
                    анализы: tile_reader.py (чтение своих тайлов), deviation.py, icp.py, analysis_jobs.py,
-                   report.py (PDF); schedule.py (импорт графика, SPI)
+                   report.py (PDF); schedule.py (импорт графика, SPI); raster_tiles.py (XYZ-пирамида ортофото);
+                   doc_text.py (полнотекстовый поиск); asbuilt.py (as-built IFC), exec_scheme.py (исполнительные схемы),
+                   ks_acts.py (КС-2/КС-3)
   integrations/    aps.py (клиент APS), autodesk_service.py (импорт из ACC), secrets.py (шифрование токенов)
   routers/         assets.py (слои, тайлы, элементы, сравнение), annotations.py, documents.py,
                    crs.py, autodesk.py, analyses.py, issues.py, schedule.py, dashboard.py,
-                   organization.py + старые геологические роутеры
+                   organization.py, iot.py, push.py, tokens.py (API-токены), branding.py (white-label), ks.py
+                   + старые геологические роутеры
   notify.py        email (SMTP; в тестах notify.outbox)
   push.py          Web Push (VAPID; в тестах push.outbox), подписки — routers/push.py
   progress.py      прогресс конвертаций → files.metadata.progress
@@ -43,6 +46,7 @@ apps/api/tests/  test_twin.py, test_autodesk.py (мок APS), test_analyses.py, 
 apps/web/
   app/twin/[projectId]/page.tsx       рабочее место двойника
   app/twin/[projectId]/dashboard/     дашборд проекта
+  app/portfolio/, app/account/        портфель проектов; учётная запись (API-токены, брендинг)
   components/twin/                    CesiumViewer.tsx (ядро сцены) + панели (Layers, Search, Issues, Annotations,
                                       Documents, Compare, Analysis, Schedule, Autodesk, Settings, Upload, Properties)
   lib/twin/                           api.ts, store.ts (zustand), types.ts, measure.ts, crs.ts (proj4)
