@@ -217,4 +217,5 @@ export const twinApi = {
 
   resolveCrs: (value: string) => request<CrsInfo>(`/api/crs/resolve${qs({ value })}`),
   crsPresets: () => request<{ value: string; label: string }[]>('/api/crs/presets'),
+  geoids: () => request<{ value: string; label: string }[]>('/api/crs/geoids'),
 };

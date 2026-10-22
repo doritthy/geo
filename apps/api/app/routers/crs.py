@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.schemas import CrsInfo
 from app.security import get_current_user
-from app.twin.georef import GeorefError, resolve_crs
+from app.twin.georef import GeorefError, available_geoids, resolve_crs
 
 router = APIRouter(prefix="/api/crs", tags=["crs"], dependencies=[Depends(get_current_user)])
 
@@ -24,6 +24,12 @@ PRESETS = [
 @router.get("/presets")
 def presets() -> list[dict]:
     return PRESETS
+
+
+@router.get("/geoids")
+def geoids() -> list[dict]:
+    """Geoid models installed on the server (for normal -> ellipsoidal heights)."""
+    return available_geoids()
 
 
 @router.get("/resolve", response_model=CrsInfo)

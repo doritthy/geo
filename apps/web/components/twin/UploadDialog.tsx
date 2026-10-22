@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { twinApi } from '@/lib/twin/api';
 import { ApiError } from '@/lib/api';
 import { useTwinStore } from '@/lib/twin/store';
@@ -37,6 +37,11 @@ export default function UploadDialog({
   const [height, setHeight] = useState('');
   const [heading, setHeading] = useState('');
   const [heightOffset, setHeightOffset] = useState('');
+  const [verticalDatum, setVerticalDatum] = useState('');
+  const [geoids, setGeoids] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    twinApi.geoids().then(setGeoids).catch(() => {});
+  }, []);
   const [upAxis, setUpAxis] = useState<'' | 'y' | 'z'>('');
   const [replaces, setReplaces] = useState('');
   const [progress, setProgress] = useState<number | null>(null);
@@ -71,6 +76,7 @@ export default function UploadDialog({
       options.height = num(height);
       options.heading = num(heading);
       options.height_offset = num(heightOffset);
+      if (verticalDatum) options.vertical_datum = verticalDatum;
       if (upAxis) options.up_axis = upAxis;
       if (replaces) options.replaces_asset_id = replaces;
     }
@@ -162,7 +168,13 @@ export default function UploadDialog({
                   <Field label={tr('Высота, м')}><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" /></Field>
                   <Field label={tr('Азимут оси Y, °')}><Input value={heading} onChange={(e) => setHeading(e.target.value)} inputMode="decimal" /></Field>
                 </div>
-                <Field label={tr('Поправка высоты (геоид), м')} hint={tr('Нормальные высоты → эллипсоидальные: добавляется к Z.')}>
+                <Field label={tr('Высоты в исходных данных')} hint={tr('Нормальные высоты пересчитываются в эллипсоидальные по модели геоида в точке объекта.')}>
+                  <Select value={verticalDatum} onChange={(e) => setVerticalDatum(e.target.value)}>
+                    <option value="">{tr('Эллипсоидальные (без пересчёта)')}</option>
+                    {geoids.map((g) => <option key={g.value} value={g.value}>{tr(g.label)}</option>)}
+                  </Select>
+                </Field>
+                <Field label={tr('Дополнительная поправка высоты, м')} hint={tr('Добавляется к Z (например, переход от местной системы высот).')}>
                   <Input value={heightOffset} onChange={(e) => setHeightOffset(e.target.value)} inputMode="decimal" placeholder="0" />
                 </Field>
                 {category === 'reality_mesh' && (

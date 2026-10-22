@@ -10,6 +10,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential curl libgomp1 libexpat1 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
+# Geoid grids for normal -> ellipsoidal heights (upload option vertical_datum).
+# EGM96 (2.7 MB) always; EGM2008 (~80 MB, ~10 cm) with --build-arg WITH_EGM2008=1.
+ARG WITH_EGM2008=0
+ENV PROJ_GRID_DIR=/opt/proj-grids
+RUN mkdir -p /opt/proj-grids \
+    && curl -fsSL https://cdn.proj.org/us_nga_egm96_15.tif -o /opt/proj-grids/us_nga_egm96_15.tif \
+    && if [ "$WITH_EGM2008" = "1" ]; then curl -fsSL https://cdn.proj.org/us_nga_egm08_25.tif -o /opt/proj-grids/us_nga_egm08_25.tif; fi
+
 WORKDIR /app
 
 COPY requirements.txt .

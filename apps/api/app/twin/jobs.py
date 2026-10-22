@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.models import BimElement, FileRecord, Project, SceneAsset
 from app.progress import report
+from app.twin import georef as geo
 from app.storage import download_to_file, upload_directory
 
 TWIN_CATEGORIES = ("bim", "point_cloud", "reality_mesh")
@@ -59,6 +60,12 @@ def process_twin_file(db: Session, file: FileRecord) -> None:
         project = db.get(Project, file.project_id)
         if project is not None and project.crs:
             options["crs"] = project.crs
+
+    # Anchored models: a normal (orthometric) anchor height -> ellipsoidal.
+    if options.get("vertical_datum") in geo.GEOID_GRIDS and options.get("longitude") is not None \
+            and options.get("latitude") is not None and options.get("height") is not None:
+        n = geo.geoid_undulation(float(options["longitude"]), float(options["latitude"]), options["vertical_datum"])
+        options["height"] = float(options["height"]) + n
 
     asset_id = uuid.uuid4()
     work = tempfile.mkdtemp(prefix="twin-")

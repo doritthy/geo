@@ -119,7 +119,6 @@ def convert_mesh(path: str, out_dir: str, options: dict) -> ConversionResult:
         for m in meshes:
             _white_texture_factor(m)
         up_axis = options.get("up_axis") or ("y" if ext in (".glb", ".gltf") else "z")
-        height_offset = float(options.get("height_offset") or 0.0)
         crs = None if options.get("georef_mode") == "anchor" else geo.resolve_crs(options.get("crs"))
 
         # Source -> Z-up source frame
@@ -131,11 +130,13 @@ def convert_mesh(path: str, out_dir: str, options: dict) -> ConversionResult:
         all_src = np.vstack([to_z_up(np.asarray(m.vertices, dtype=np.float64)) for m in meshes])
         smin, smax = all_src.min(axis=0), all_src.max(axis=0)
 
+        height_offset = geo.total_height_offset(options, crs, (smin + smax) / 2.0)
         if crs is not None:
             center = geo.crs_to_ecef(((smin + smax) / 2.0)[None, :], crs, height_offset)[0]
             llh = geo.ecef_to_llh(center)[0]
             axes = geo.enu_axes(llh[0], llh[1])
-            georef = {"mode": "absolute", "crs": crs.to_string(), "height_offset": height_offset}
+            georef = {"mode": "absolute", "crs": crs.to_string(), "height_offset": height_offset,
+                      "vertical_datum": options.get("vertical_datum") or "ellipsoid"}
 
             def to_tile(v):
                 return geo.crs_to_ecef(v, crs, height_offset)

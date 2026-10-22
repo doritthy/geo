@@ -540,3 +540,44 @@ def test_ifc_importance_lod(client, monkeypatch):
     # Every element in exactly one tile; the top tile holds the big structure.
     assert len(ids) == len(set(ids)) == asset["stats"]["element_count"]
     assert top_types <= {"IfcSlab", "IfcWall", "IfcWallStandardCase", "IfcColumn"} and "IfcWindow" not in top_types
+
+
+@pytest.fixture()
+def egm96(monkeypatch):
+    """EGM96 grid from cdn.proj.org, cached between runs (as in the API image)."""
+    import os
+    import urllib.request
+
+    cache = os.path.expanduser("~/.cache/twin-proj-grids")
+    path = os.path.join(cache, "us_nga_egm96_15.tif")
+    if not os.path.exists(path):
+        os.makedirs(cache, exist_ok=True)
+        try:
+            urllib.request.urlretrieve("https://cdn.proj.org/us_nga_egm96_15.tif", path + ".part")
+            os.replace(path + ".part", path)
+        except Exception as exc:  # noqa: BLE001
+            pytest.skip(f"EGM96 grid unavailable: {exc}")
+    monkeypatch.setenv("PROJ_GRID_DIR", cache)
+    return path
+
+
+def test_geoid_vertical_datum(client, egm96):
+    from app.twin import georef
+
+    h = _headers(client)
+    pid = _project(client, h)
+    assert [g["value"] for g in client.get("/api/crs/geoids", headers=h).json()] == ["egm96"]
+    # make_las(): EPSG:32642 around 69°E / 51°N, where EGM96 N ≈ -32 m.
+    plain = client.get(f"/api/assets/{_upload(client, h, pid, 'a.las', make_las(2000), 'point_cloud')}", headers=h).json()
+    normal = client.get(f"/api/assets/{_upload(client, h, pid, 'b.las', make_las(2000), 'point_cloud', {'vertical_datum': 'egm96', 'height_offset': 0.5})}", headers=h).json()
+    assert plain["georef"]["height_offset"] == 0.0
+    n = normal["georef"]["height_offset"] - 0.5
+    assert -36 < n < -28 and normal["georef"]["vertical_datum"] == "egm96"
+    assert normal["stats"]["center"]["height"] == pytest.approx(plain["stats"]["center"]["height"] + n + 0.5, abs=0.05)
+
+    # Anchored model: the given (normal) anchor height becomes ellipsoidal.
+    ifc = _upload(client, h, pid, "m.ifc", make_ifc(), "bim",
+                  {"georef_mode": "anchor", "longitude": 71.43, "latitude": 51.13, "height": 350, "vertical_datum": "egm96"})
+    g = client.get(f"/api/assets/{ifc}", headers=h).json()["georef"]
+    assert g["height"] == pytest.approx(350 + georef.geoid_undulation(71.43, 51.13, "egm96"), abs=1e-6)
+    assert -34 < g["height"] - 350 < -30

@@ -270,7 +270,6 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
     import ifcopenshell
 
     model = ifcopenshell.open(path)
-    height_offset = float(options.get("height_offset") or 0.0)
     user_crs = geo.resolve_crs(options.get("crs"))
     mode_hint = options.get("georef_mode") or "auto"
 
@@ -293,13 +292,19 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
     # --- choose georeferencing ---
     to_tile = None  # callable (n,3) model coords -> tile frame
     georef: dict
+    vdatum = options.get("vertical_datum") or "ellipsoid"
+    model_center = (all_min + all_max) / 2.0
     if mode_hint != "anchor" and mc is not None and mc_crs is not None:
         crs = mc_crs
-        georef = {"mode": "absolute", "crs": crs.to_string(), "source": "IfcMapConversion", "height_offset": height_offset}
+        height_offset = geo.total_height_offset(options, crs, _apply_map_conversion(model_center[None, :], mc)[0])
+        georef = {"mode": "absolute", "crs": crs.to_string(), "source": "IfcMapConversion", "height_offset": height_offset,
+                  "vertical_datum": vdatum}
         to_tile = lambda p: geo.crs_to_ecef(_apply_map_conversion(p, mc), crs, height_offset)  # noqa: E731
     elif mode_hint != "anchor" and user_crs is not None and (looks_projected or mode_hint == "absolute"):
         crs = user_crs
-        georef = {"mode": "absolute", "crs": crs.to_string(), "source": "model_coordinates", "height_offset": height_offset}
+        height_offset = geo.total_height_offset(options, crs, model_center)
+        georef = {"mode": "absolute", "crs": crs.to_string(), "source": "model_coordinates", "height_offset": height_offset,
+                  "vertical_datum": vdatum}
         to_tile = lambda p: geo.crs_to_ecef(p, crs, height_offset)  # noqa: E731
     else:
         anchor = None

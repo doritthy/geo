@@ -184,6 +184,8 @@ export interface TwinUploadOptions {
   height?: number;
   heading?: number;
   height_offset?: number;
+  /** Source heights are normal (geoid) heights: egm96 / egm2008; default ellipsoidal. */
+  vertical_datum?: string;
   up_axis?: 'y' | 'z';
   captured_at?: string;
   replaces_asset_id?: string;

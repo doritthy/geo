@@ -197,12 +197,12 @@ def convert_point_cloud(path: str | None, source_format: str, out_dir: str, opti
     if src.count == 0:
         raise ValueError("Облако точек пустое")
 
-    height_offset = float(options.get("height_offset") or 0.0)
     crs = geo.resolve_crs(options.get("crs"))
     if crs is None and src.crs_wkt:
         crs = geo.resolve_crs(src.crs_wkt)
     if options.get("georef_mode") == "anchor":
         crs = None
+    height_offset = geo.total_height_offset(options, crs, (src.mins + src.maxs) / 2.0)
 
     cube = float(max(src.maxs - src.mins)) or 1.0
     cube_min = src.mins.copy()
@@ -278,7 +278,8 @@ def _write_tiles(work, out_dir, node_counts, src, crs, height_offset, cube, cube
         center_ecef = geo.crs_to_ecef(center_src[None, :], crs, height_offset)[0]
         llh = geo.ecef_to_llh(center_ecef)[0]
         axes = geo.enu_axes(llh[0], llh[1])
-        georef = {"mode": "absolute", "crs": crs.to_string(), "height_offset": height_offset}
+        georef = {"mode": "absolute", "crs": crs.to_string(), "height_offset": height_offset,
+                  "vertical_datum": options.get("vertical_datum") or "ellipsoid"}
 
         def to_tile(xyz):
             return geo.crs_to_ecef(xyz, crs, height_offset)

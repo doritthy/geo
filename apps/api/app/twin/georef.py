@@ -11,13 +11,16 @@ infra/db/twin.sql, `scene_assets.georef`):
   client places the tileset with longitude/latitude/height/heading/scale.
 
 Heights: CRS Z values are usually orthometric (Балтийская система высот);
-Cesium works with ellipsoidal heights. `height_offset` (geoid undulation, m)
-is added before the transform until a geoid grid is configured.
+Cesium works with ellipsoidal heights. `height_offset` (m) is added before
+the transform; with `vertical_datum` = egm96 / egm2008 the geoid undulation
+at the model's location is computed from the PROJ grid and added to it
+(one value per model — the undulation changes by millimetres across a site).
 """
 
 from __future__ import annotations
 
 import math
+import os
 from functools import lru_cache
 
 import numpy as np
@@ -28,6 +31,64 @@ _GEOD = Geod(ellps="WGS84")
 
 class GeorefError(ValueError):
     pass
+
+
+# Geoid models -> PROJ grid files (cdn.proj.org). The API image ships EGM96;
+# EGM2008 (80 MB) is optional (Dockerfile build arg).
+GEOID_GRIDS = {"egm96": "us_nga_egm96_15.tif", "egm2008": "us_nga_egm08_25.tif"}
+_GEOID_LABELS = {"egm96": "EGM96 (нормальные высоты, ~1 м)", "egm2008": "EGM2008 (нормальные высоты, ~10 см)"}
+
+
+def _grid_dirs() -> list[str]:
+    from pyproj.datadir import get_data_dir
+
+    dirs = [d for d in os.environ.get("PROJ_GRID_DIR", "/opt/proj-grids").split(os.pathsep) if d]
+    return dirs + get_data_dir().split(os.pathsep)
+
+
+def _grid_path(model: str) -> str | None:
+    name = GEOID_GRIDS.get(model)
+    for d in _grid_dirs() if name else []:
+        path = os.path.join(d, name)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def available_geoids() -> list[dict]:
+    return [{"value": m, "label": _GEOID_LABELS[m]} for m in GEOID_GRIDS if _grid_path(m)]
+
+
+@lru_cache(maxsize=4)
+def _geoid_transformer(path: str) -> Transformer:
+    # vgridshift: z_out = z_in + multiplier * N; with z_in = 0 this yields N.
+    return Transformer.from_pipeline(f"+proj=vgridshift +grids={path} +multiplier=1")
+
+
+def geoid_undulation(lon: float, lat: float, model: str) -> float:
+    path = _grid_path(model)
+    if path is None:
+        raise GeorefError(f"Модель геоида {model} не установлена на сервере (файл {GEOID_GRIDS.get(model)})")
+    _, _, n = _geoid_transformer(path).transform(math.radians(lon), math.radians(lat), 0.0, radians=True)
+    if not math.isfinite(n) or abs(n) > 200:
+        raise GeorefError(f"Не удалось вычислить высоту геоида в точке {lat:.4f}, {lon:.4f}")
+    return float(n)
+
+
+def total_height_offset(options: dict, crs: CRS | None = None, xyz=None, lonlat: tuple[float, float] | None = None) -> float:
+    """`height_offset` from the upload plus the geoid undulation when the
+    source heights are normal (vertical_datum = egm96 / egm2008). The place
+    is given as lon/lat or as a point `xyz` in `crs`."""
+    base = float(options.get("height_offset") or 0.0)
+    model = options.get("vertical_datum")
+    if model not in GEOID_GRIDS:
+        return base
+    if lonlat is None:
+        if crs is None or xyz is None:
+            return base
+        lon, lat = Transformer.from_crs(crs, 4326, always_xy=True).transform(float(xyz[0]), float(xyz[1]))
+        lonlat = (lon, lat)
+    return base + geoid_undulation(lonlat[0], lonlat[1], model)
 
 
 def resolve_crs(value: str | int | None) -> CRS | None:

@@ -37,7 +37,8 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 
 * СК проекта — EPSG, PROJ-строка (МСК) или WKT. Есть пресеты: WGS 84, UTM 41–45N, СК-42 (Гаусс–Крюгер, зоны 8–15).
 * Высоты: Cesium работает с эллипсоидальными высотами. Для нормальных высот
-  (Балтийская система) задаётся `height_offset` — поправка геоида.
+  (Балтийская система) выберите при загрузке модель геоида (`vertical_datum` = egm96 / egm2008):
+  высота геоида N вычисляется в точке объекта и добавляется к Z; `height_offset` — дополнительная ручная поправка.
 * Без сервиса рельефа (Cesium ion) глобус поднимается на уровень площадки
   объекта, чтобы подложка, ГИС-слои и модели совпадали по высоте.
 
@@ -96,7 +97,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
   Для продуктива вынести в отдельный воркер или подключить PDAL/Entwine.
 - **Фоновые задачи**: в docker-compose — очередь в PostgreSQL и отдельный сервис `worker` (`JOB_MODE=queue`,
   масштабируется `--scale worker=N`); в разработке и тестах — в процессе API (`JOB_MODE=inline`).
-- **Высоты**: модель геоида не подключена, только ручная поправка `height_offset`.
+- **Высоты**: глобальные модели EGM96/EGM2008; национальной модели квазигеоида РК нет (нужна сетка).
 - **Растровые подложки** — один PNG без пирамиды тайлов (большие ортофото будут уменьшены).
 - **Нативного мобильного приложения нет**: фотофиксация через браузер телефона (камера, GPS), push — нет.
 - **ACC Issues**: двусторонняя синхронизация реализована, но проверена только на мок-API; исполнители и
@@ -109,7 +110,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| POST | `/api/projects/{id}/files` | Загрузка; `category` = `bim` / `point_cloud` / `reality_mesh` / `map_vector` / `map_raster`, `options` — JSON (crs, georef_mode, longitude, latitude, height, heading, height_offset, up_axis, captured_at, replaces_asset_id, name) |
+| POST | `/api/projects/{id}/files` | Загрузка; `category` = `bim` / `point_cloud` / `reality_mesh` / `map_vector` / `map_raster`, `options` — JSON (crs, georef_mode, longitude, latitude, height, heading, height_offset, vertical_datum, up_axis, captured_at, replaces_asset_id, name) |
 | GET | `/api/projects/{id}/assets` | Слои сцены (3D Tiles) |
 | PATCH / DELETE | `/api/assets/{id}` | Привязка (anchor / offset_enu), имя, дата; удаление |
 | GET | `/api/assets/{id}/tiles/{path}` | Раздача tileset.json и тайлов |
@@ -140,6 +141,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | `APS_WEBHOOK_URL`, `APS_WEBHOOK_SECRET` | Публичный адрес вебхука и секрет подписи |
 | `PUBLIC_WEB_URL` | Куда возвращать пользователя после входа в Autodesk; ссылки в письмах |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_TLS` | Email-уведомления о предписаниях |
+| `PROJ_GRID_DIR` | Каталог(и) сеток геоида PROJ (по умолчанию `/opt/proj-grids`; в образе — EGM96, EGM2008 по `--build-arg WITH_EGM2008=1`) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push о предписаниях (ключи: `python -m app.push`). Без ключей колокольчик скрыт |
 
 Существующая база (созданная до появления двойника) обновляется вручную:
