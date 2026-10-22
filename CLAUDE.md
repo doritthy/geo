@@ -112,6 +112,12 @@ Python-зависимости — в venv (`pip install -r requirements.txt -r r
 - Headless Chromium для скриншотов: `/opt/pw-browsers/chromium` с `--headless=new`,
   `--use-angle=swiftshader`; в dev-режиме объект `window.__twin` даёт доступ к viewer и тайлсетам.
 
+## Прогресс длинных задач
+
+Конвертеры вызывают `app.progress.report("Этап", доля)` в своих циклах; задача оборачивается в
+`progress.track(file_id)`. Запись идёт отдельной транзакцией в `files.metadata.progress` (не чаще 1 раза/с),
+UI (`LayersPanel` → `FileProgress`) показывает этап и полосу. Новые этапы — добавить перевод в `i18n.kk.ts`.
+
 ## Локализация (ru / kk)
 
 - Исходный язык UI — русский. Каждую новую строку интерфейса оборачивайте в `tr('…')` из `@/lib/i18n`

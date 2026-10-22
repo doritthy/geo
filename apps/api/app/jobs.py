@@ -27,6 +27,7 @@ from app.parsers.trajectory_csv_parser import parse_csv_trajectory
 from app.parsers.vector_parser import VECTOR_FORMATS, parse_vector
 from app.parsers.xyz_parser import parse_xyz
 from app.storage import get_bytes, upload_bytes
+from app.progress import track
 from app.twin.jobs import TWIN_CATEGORIES, process_twin_file
 
 logger = logging.getLogger(__name__)
@@ -327,7 +328,8 @@ def dispatch_parse(file_id: uuid.UUID, db: Session) -> None:
     try:
         fmt = file.source_format
         if file.category in TWIN_CATEGORIES:
-            process_twin_file(db, file)
+            with track(file.id):
+                process_twin_file(db, file)
             file.status = "ready"
         elif fmt in _UNSUPPORTED_MESSAGES:
             file.status = "error"

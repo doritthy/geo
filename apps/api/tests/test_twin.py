@@ -412,3 +412,40 @@ def test_document_fulltext_search(client):
     bad = client.post(f"/api/projects/{pid}/documents", data={"title": "Скан"},
                       files={"file": ("scan.pdf", b"%PDF-1.4 broken")}, headers=h).json()
     assert client.get(f"/api/documents/{bad['id']}", headers=h).json()["latest_version"]["text_status"] in ("none", "error")
+
+
+def test_conversion_progress_reporting(client, monkeypatch):
+    import uuid
+
+    from sqlalchemy import text
+
+    from app import progress
+    from app.db import engine
+    from app.twin import ifc_convert, jobs as twin_jobs, pointcloud_convert
+
+    stages: list[tuple[str, float | None]] = []
+    real = progress.report
+
+    def spy(stage, fraction=None):
+        stages.append((stage, fraction))
+        real(stage, fraction)
+
+    for mod in (ifc_convert, pointcloud_convert, twin_jobs):
+        monkeypatch.setattr(mod, "report", spy)
+    h = _headers(client)
+    pid = _project(client, h)
+    _upload(client, h, pid, "scan.las", make_las(), "point_cloud")
+    _upload(client, h, pid, "m.ifc", make_ifc(), "bim")
+    names = [s for s, _ in stages]
+    for expected in ("Загрузка исходника", "Октодерево точек", "Геометрия IFC", "Запись тайлов", "Публикация тайлов"):
+        assert expected in names
+    assert all(f is None or 0.0 <= f <= 1.0 for _, f in stages)
+
+    # Progress is visible in files.metadata while tracked, cleared on completion.
+    file_id = client.get(f"/api/projects/{pid}/files", headers=h).json()[0]["id"]
+    with progress.track(uuid.UUID(file_id)):
+        progress.report("Тест", 0.5)
+    with engine.connect() as conn:
+        meta = conn.execute(text("SELECT metadata FROM files WHERE id = :id"), {"id": file_id}).scalar()
+    assert meta["progress"] == {"stage": "Тест", "fraction": 0.5}
+    progress.report("вне задачи")  # no tracked file: a no-op

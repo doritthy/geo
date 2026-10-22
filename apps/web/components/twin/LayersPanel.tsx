@@ -207,10 +207,7 @@ export default function LayersPanel({
               {f.status === 'error' ? (
                 <div className="mt-1 text-red-300">{f.error_message}</div>
               ) : (
-                <div className="mt-1 flex items-center gap-2 text-accent-amber">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-accent-amber" />
-                  {f.status === 'uploaded' ? tr('в очереди') : tr('конвертация в 3D Tiles…')}
-                </div>
+                <FileProgress f={f} />
               )}
             </div>
           ))}
@@ -261,6 +258,28 @@ export default function LayersPanel({
               </button>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/** Stage + bar from `files.metadata.progress`, written by the converter. */
+function FileProgress({ f }: { f: FileRecord }) {
+  const p = f.metadata.progress as { stage: string; fraction: number | null } | undefined;
+  const label = f.status === 'uploaded' ? tr('в очереди') : p ? tr(p.stage) : tr('конвертация в 3D Tiles…');
+  const pct = f.status === 'processing' && p?.fraction != null ? Math.round(p.fraction * 100) : null;
+  return (
+    <div className="mt-1 space-y-1">
+      <div className="flex items-center gap-2 text-accent-amber">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-accent-amber" />
+        <span className="flex-1">{label}</span>
+        {pct !== null && <span className="tabular-nums">{pct}%</span>}
+      </div>
+      {pct !== null && (
+        <div className="h-1 overflow-hidden rounded bg-bg-panel2">
+          <div className="h-full bg-accent-amber transition-all" style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>

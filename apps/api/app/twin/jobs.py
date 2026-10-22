@@ -19,6 +19,7 @@ from sqlalchemy import func, insert
 from sqlalchemy.orm import Session
 
 from app.models import BimElement, FileRecord, Project, SceneAsset
+from app.progress import report
 from app.storage import download_to_file, upload_directory
 
 TWIN_CATEGORIES = ("bim", "point_cloud", "reality_mesh")
@@ -64,6 +65,7 @@ def process_twin_file(db: Session, file: FileRecord) -> None:
     try:
         ext = os.path.splitext(file.filename)[1].lower() or ".bin"
         raw_path = os.path.join(work, f"source{ext}")
+        report("Загрузка исходника")
         download_to_file(file.storage_key, raw_path)
         out_dir = os.path.join(work, "out")
         os.makedirs(out_dir, exist_ok=True)
@@ -111,6 +113,7 @@ def process_twin_file(db: Session, file: FileRecord) -> None:
             kind = "mesh"
 
         prefix = asset_prefix(file.project_id, asset_id)
+        report("Публикация тайлов")
         uploaded = upload_directory(prefix, out_dir)
         stats = {**result.stats, "file_count": uploaded}
         stats.setdefault("entry", "tileset.json")

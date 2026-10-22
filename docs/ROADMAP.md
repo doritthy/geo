@@ -90,7 +90,7 @@ Open API частично уже есть (FastAPI + Swagger на `/docs`).
 
 ## 3. Технический долг / масштабирование
 
-- Фоновые задачи: очередь в PostgreSQL (`jobs`, `app/queue.py`, воркер `python -m app.worker`, `JOB_MODE=queue`) — сделано; приоритеты и прогресс задач в UI — ⬜.
+- Фоновые задачи: очередь в PostgreSQL (`jobs`, `app/queue.py`, воркер `python -m app.worker`, `JOB_MODE=queue`) — сделано; прогресс конвертации в UI (`app/progress.py` → `files.metadata.progress`, этап + доля) — сделано; приоритеты задач — ⬜.
 - IFC целиком в памяти конвертера; нет упрощённых LOD для дальних планов → для больших
   моделей: потоковая обработка элементов, иерархия тайлов с упрощением (meshoptimizer).
 - Октодерево облаков на Python → для сотен млн точек: PDAL + Entwine/`untwine` или

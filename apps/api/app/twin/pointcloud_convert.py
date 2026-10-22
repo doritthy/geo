@@ -28,6 +28,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from app.progress import report
 from app.twin import georef as geo
 from app.twin.tiles import TileNode, build_pnts, box_diagonal, oriented_box, tileset_json
 
@@ -215,7 +216,10 @@ def convert_point_cloud(path: str | None, source_format: str, out_dir: str, opti
     occupied: list[np.ndarray] = [np.empty(0, dtype=np.int64) for _ in range(depth)]
     node_counts: dict[tuple[int, int, int, int], int] = {}
     try:
+        done = 0
         for rec in src.chunks():
+            report("Октодерево точек", done / max(src.count, 1))
+            done += len(rec)
             xyz = np.column_stack([rec["x"], rec["y"], rec["z"]])
             norm = np.clip((xyz - cube_min) / cube, 0.0, 1.0 - 1e-12)
             level = np.full(len(rec), depth, dtype=np.int64)
@@ -288,7 +292,8 @@ def _write_tiles(work, out_dir, node_counts, src, crs, height_offset, cube, cube
             return xyz - origin
 
     nodes: dict[tuple, TileNode] = {}
-    for key, count in sorted(node_counts.items()):
+    for ni, (key, count) in enumerate(sorted(node_counts.items())):
+        report("Запись тайлов", ni / max(len(node_counts), 1))
         lvl = key[0]
         rec = np.fromfile(os.path.join(work, "%d-%d-%d-%d.bin" % key), dtype=_REC)
         xyz = to_tile(np.column_stack([rec["x"], rec["y"], rec["z"]]))

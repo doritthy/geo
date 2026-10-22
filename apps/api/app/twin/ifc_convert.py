@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from app.progress import report
 from app.twin import georef as geo
 from app.twin.tiles import Primitive, TileNode, build_b3dm, build_glb, box_diagonal, oriented_box, tileset_json, union_box
 
@@ -244,6 +245,7 @@ def _iterate_geometry(model) -> tuple[list[_ElementGeom], list[dict]]:
                 json.dumps(meta["properties"], sort_keys=True, ensure_ascii=False).encode()
             ).hexdigest()
             metas.append(meta)
+        report("Геометрия IFC", iterator.progress() / 100.0)
         if not iterator.next():
             break
     return geoms, metas
@@ -336,6 +338,7 @@ def convert_ifc(path: str, out_dir: str, options: dict) -> ConversionResult:
     chunks = _partition(geoms)
     children: list[TileNode] = []
     for ti, chunk in enumerate(chunks):
+        report("Запись тайлов", ti / max(len(chunks), 1))
         pts = np.vstack([p[1] for e in chunk for p in e.pieces])
         origin, box = oriented_box(pts, axes, pad=0.05)
         by_color: dict[tuple, list] = {}
