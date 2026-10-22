@@ -321,3 +321,18 @@ CREATE TABLE IF NOT EXISTS sensor_alerts (
   message TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sensor_alerts_sensor ON sensor_alerts(sensor_id, ts DESC);
+
+-- Open API: personal API tokens. A token acts with its owner's rights
+-- (optionally read-only); only a SHA-256 hash is stored.
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  prefix TEXT NOT NULL,                 -- first characters, shown in the UI
+  token_hash TEXT NOT NULL UNIQUE,
+  read_only BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);

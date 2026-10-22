@@ -134,6 +134,7 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | POST | `/api/schedule/tasks/{id}/elements`, `/api/projects/{id}/schedule/progress-from-analysis` | Привязка, факт по скану |
 | GET | `/api/projects/{id}/dashboard` | Дашборд |
 | GET | `/api/portfolio` | Сводка по всем доступным проектам |
+| GET/POST/DELETE | `/api/tokens` | Персональные API-токены (только из сессии) |
 | GET/POST | `/api/projects/{id}/sensors`; GET/PATCH/DELETE `/api/sensors/{id}` | Датчики IoT (токен — только редакторам) |
 | GET | `/api/sensors/{id}/readings?hours=&points=`, `/api/projects/{id}/sensor-alerts` | Ряды (усреднение + min/max), события |
 | POST | `/api/iot/ingest` (`X-Sensor-Token`) | Приём показаний от шлюза: `{value, ts}` или `{readings: [...]}` |
@@ -141,6 +142,12 @@ OGC 3D Tiles 1.0, раздаются через API с проверкой дос
 | … | `/api/integrations/autodesk/*`, `/api/projects/{id}/autodesk/imports` | Autodesk ACC |
 
 Полная схема — `/docs` (Swagger) работающего API.
+
+**Open API / интеграции.** Персональный токен создаётся на странице `/account` (или `POST /api/tokens`
+из сессии) и передаётся как `Authorization: Bearer twk_…`; действует с правами владельца, может быть
+«только чтение» и с ограниченным сроком; хранится только SHA-256. Токеном нельзя управлять токенами.
+Power BI / Excel: «Получить данные → Из Интернета», URL, например, `…/api/portfolio` или
+`…/api/projects/{id}/dashboard`, заголовок `Authorization: Bearer twk_…`.
 
 ## Настройка
 

@@ -24,6 +24,7 @@ from app.routers import (
     push,
     schedule,
     surfaces,
+    tokens,
     wells,
 )
 from app.storage import ensure_bucket
@@ -74,6 +75,7 @@ app.include_router(schedule.router)
 app.include_router(dashboard.router)
 app.include_router(push.router)
 app.include_router(iot.router)
+app.include_router(tokens.router)
 
 
 @app.get("/health")
